@@ -12,7 +12,7 @@ from typing import Any
 from .ansi import colorize, level_for
 from .meters import BAR_WIDTH, bar, round_half_up
 from .output import escape_strict
-from .ui import Item, Title
+from .ui import Item
 
 MONOSPACE = "Menlo"
 
@@ -49,22 +49,3 @@ def Meter(
     text = escape_strict(f"{label}: {bar(used, width)} {used}% used{detail}")
 
     return Item(colorize(text, level_for(used)), ansi=True, font=font)
-
-
-def MenuBar(
-    *parts: str,
-    separator: str = " ",
-    font: str = MONOSPACE,
-    size: int = 13,
-    **attrs: Any,
-) -> Title:
-    """The menu bar line, joined from its segments and styled for colour."""
-    return Title(
-        separator.join(parts),
-        ansi=True,
-        symbolize=False,
-        font=font,
-        size=size,
-        dropdown=False,
-        **attrs,
-    )

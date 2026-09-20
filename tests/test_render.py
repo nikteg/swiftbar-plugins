@@ -16,12 +16,12 @@ from agent_usage.types import (
 from builtins_fixture import EXTENSIONS
 from builtins_fixture import LOCAL_ACTIVITY_BUDGETS as BUDGETS
 from plugin_loader import load
-from swiftbar_lib.components import Action, MenuBar
+from swiftbar_lib.components import Action
 from swiftbar_lib.output import render
 from swiftbar_lib.ui import Separator
 
 plugin = load("agent-usage.15m.py")
-Icon, ProviderUsage = plugin.Icon, plugin.ProviderUsage
+Circles, Icon, ProviderUsage = plugin.Circles, plugin.Icon, plugin.ProviderUsage
 
 
 def pair(result, providers):
@@ -45,7 +45,7 @@ def show(
 
     return render(
         [
-            MenuBar(*(Icon(usage) for usage in paired)),
+            Circles(*(Icon(usage) for usage in paired)),
             [[ProviderUsage(usage), Separator()] for usage in paired],
             Action("Clear local usage caches", plugin_path, "--clear-cache")
             if options.show_clear_cache

@@ -27,12 +27,15 @@ from typing import Any
 
 
 class Title:
-    """A menu bar line. Several of them rotate in SwiftBar."""
+    """A menu bar line. Several of them rotate in SwiftBar.
+
+    Variadic, so a bar assembled from segments needs no join at the call site.
+    """
 
     __slots__ = ("text", "attrs")
 
-    def __init__(self, text: str, **attrs: Any) -> None:
-        self.text = text
+    def __init__(self, *parts: str, separator: str = " ", **attrs: Any) -> None:
+        self.text = separator.join(parts)
         self.attrs = attrs
 
     def __repr__(self) -> str:

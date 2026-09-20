@@ -284,7 +284,7 @@ wrapper needs a callback is to get the failure inside its own `try`.
 | Module | For |
 | --- | --- |
 | `ui` | The node types: `Title`, `Item`, `Separator`, `Refresh` |
-| `components` | Rows that recur: `Meter`, `Action`, `Link`, `MenuBar` |
+| `components` | Rows that recur: `Meter`, `Action`, `Link` |
 | `output` | Rendering a node tree to SwiftBar's line format, and the escaping |
 | `plugin` | `guard`, the error boundary: a crash becomes an error row, not a stack trace |
 | `http` | JSON/text with timeouts, parallel fetches, graceful failures |

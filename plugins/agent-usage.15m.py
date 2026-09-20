@@ -58,12 +58,12 @@ from agent_usage import (
 from agent_usage.providers import ClaudeProfile
 from agent_usage.types import ProviderExtension
 from swiftbar_lib.ansi import COLORS, RESET, level_for
-from swiftbar_lib.components import Action, MenuBar, Meter
+from swiftbar_lib.components import MONOSPACE, Action, Meter
 from swiftbar_lib.dates import MONTHS, MS_PER_MINUTE, WEEKDAYS
 from swiftbar_lib.meters import compact_number
 from swiftbar_lib.output import escape_strict, show
 from swiftbar_lib.plugin import guard
-from swiftbar_lib.ui import Item, Node, Separator
+from swiftbar_lib.ui import Item, Node, Separator, Title
 
 HOME = os.environ.get("HOME", "")
 
@@ -144,6 +144,18 @@ def _usage_color(usage: Usage) -> int:
         return COLORS["critical"]
 
     return COLORS["unknown"]
+
+
+def Circles(*icons: str) -> Title:
+    """The menu bar: one coloured circle per provider."""
+    return Title(
+        *icons,
+        ansi=True,
+        symbolize=False,
+        font=MONOSPACE,
+        size=13,
+        dropdown=False,
+    )
 
 
 def Icon(usage: Usage) -> str:
@@ -275,7 +287,7 @@ if __name__ == "__main__":
     )
 
     show(
-        MenuBar(
+        Circles(
             Icon(claude_default), Icon(claude_personal), Icon(codex), Icon(deepseek)
         ),
         ProviderUsage(claude_default),

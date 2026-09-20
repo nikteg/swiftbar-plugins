@@ -16,7 +16,7 @@ directory as the plugin files, which is the one place Python puts on
 """
 
 from .ansi import RESET, colorize, level_for
-from .components import Action, Link, MenuBar, Meter
+from .components import Action, Link, Meter
 from .dates import parse_date, relative
 from .meters import bar, clamp_percent, compact_number, round_half_up
 from .notify import notify
@@ -27,7 +27,6 @@ from .ui import Item, Refresh, Separator, Title
 
 __all__ = [
     "Meter",
-    "MenuBar",
     "Link",
     "Action",
     "Item",
