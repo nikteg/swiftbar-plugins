@@ -58,18 +58,14 @@ def speaker_icon(volume: int) -> str:
 def run(presets: tuple[int, ...] = (20, 30, 50, 70)) -> int:
     def build(menu: Menu) -> None:
         if not is_running("Spotify"):
-            menu.title("Spotify")
-            menu.sep()
-            menu.item("Spotify not running")
+            menu.unavailable("Spotify", "Spotify not running")
 
             return
 
         binary = which("spotify_volume")
 
         if binary is None:
-            menu.title("Spotify")
-            menu.sep()
-            menu.item("spotify_volume not found on PATH")
+            menu.unavailable("Spotify", "spotify_volume not found on PATH")
 
             return
 

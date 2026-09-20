@@ -44,11 +44,24 @@ def get_json(
     url: str,
     headers: Mapping[str, str] | None = None,
     timeout: float = DEFAULT_TIMEOUT,
+    method: str = "GET",
 ) -> Any:
-    request = urllib.request.Request(url, headers=dict(headers or {}))
+    body, _ = get_json_with_headers(url, headers, timeout, method)
+
+    return body
+
+
+def get_json_with_headers(
+    url: str,
+    headers: Mapping[str, str] | None = None,
+    timeout: float = DEFAULT_TIMEOUT,
+    method: str = "GET",
+) -> tuple[Any, Mapping[str, str]]:
+    """Also returns response headers, for APIs that report quota in them."""
+    request = urllib.request.Request(url, method=method, headers=dict(headers or {}))
 
     with _open(request, timeout) as response:
-        return json.loads(response.read().decode("utf-8"))
+        return json.loads(response.read().decode("utf-8")), response.headers
 
 
 def post_json(

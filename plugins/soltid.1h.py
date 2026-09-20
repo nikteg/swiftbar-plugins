@@ -79,9 +79,7 @@ def run(
         results = result.get("safeTimeResults") or []
 
         if not results:
-            menu.title("☀️ —")
-            menu.sep()
-            menu.item("No sun data for right now")
+            menu.unavailable("☀️ —", "No sun data for right now")
 
             return
 

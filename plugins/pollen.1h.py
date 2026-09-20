@@ -83,9 +83,9 @@ def run(city: str = "Göteborg", highlight: tuple[str, ...] = ("bjork",)) -> int
         match = next((c for c in fetch(city) if c.get("city") == city), None)
 
         if match is None:
-            menu.title(f"🌿 {city} unavailable")
-            menu.sep()
-            menu.item(f"No pollen data for {city} today")
+            menu.unavailable(
+                f"🌿 {city} unavailable", f"No pollen data for {city} today"
+            )
 
             return
 

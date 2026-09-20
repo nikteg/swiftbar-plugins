@@ -4,26 +4,15 @@ My [SwiftBar](https://github.com/swiftbar/SwiftBar) plugins, in Python, sharing
 one small toolkit.
 
 ```
-lib/swiftbar/     the toolkit every plugin shares
-plugins/          one file per plugin, plus agent_usage/ for the one that outgrew a file
-tests/            offline test suite
+lib/swiftbar/   the toolkit every plugin shares
+plugins/        one file per plugin, plus agent_usage/ for the one that outgrew a file
+tests/          offline test suite
 ```
 
-Each plugin documents itself. Open the file to see what it shows, what you can
-configure and where its data comes from — there is no per-plugin documentation
-anywhere else.
-
-| Plugin | Shows |
-| --- | --- |
-| `agent-usage.15m.py` | Coding agent subscription quotas and local spend |
-| `goldenhour.1h.py` | This evening's golden hour |
-| `hn.1h.py` | Hacker News posts over a score threshold, with notifications |
-| `kubecontext.1m.py` | Active kubeconfig context, and a menu to switch |
-| `pollen.1h.py` | Pollen levels for a Swedish city |
-| `soltid.1h.py` | How long you can stay in the sun before burning |
-| `spotifyvolume.5m.py` | Read and set Spotify's volume |
-
-![agent-usage in the menu bar](docs/agent-usage-screenshot.png)
+Every plugin documents itself: open the file to see what it shows, what you can
+configure and where its data comes from. The examples below are the actual
+output each one prints — SwiftBar reads a line of text, then `---`, then the
+dropdown, with `key=value` attributes after a `|`.
 
 ## Install
 
@@ -31,15 +20,193 @@ anywhere else.
 make install
 ```
 
-That symlinks every plugin into `~/swiftbar`, so an edit here takes effect on
-the next SwiftBar refresh with nothing to rebuild. Override the destination
-with `make install PLUGIN_DIR="$HOME/Library/Application Support/SwiftBar/Plugins"`.
+Symlinks every plugin into `~/swiftbar`, so an edit here takes effect on the
+next refresh with nothing to rebuild. `make uninstall` removes them, `make
+list` prints what would be installed. Override the destination with
+`make install PLUGIN_DIR="$HOME/Library/Application Support/SwiftBar/Plugins"`.
 
-`make uninstall` removes the symlinks. `make list` prints what would be
-installed. A plugin's refresh interval is the `15m` / `1h` part of its
-filename, so renaming the file changes it.
+A plugin's refresh interval is the `15m` / `1h` part of its filename, so
+renaming the file changes it.
 
-## Running them
+---
+
+## [agent-usage.15m.py](plugins/agent-usage.15m.py)
+
+Coding agent subscription quotas and local spend. One circle per provider in
+the menu bar, coloured by its worst quota. Implementation lives in
+[plugins/agent_usage/](plugins/agent_usage/), a package because a provider
+registry, a pricing catalogue and a transcript cache do not fit one file.
+
+```
+● ● ● ●
+---
+● Claude Default · TEAM
+Weekly: ●○○○○○○○○○○○ 5% used · resets Thu Sep 24 19:00 (in 4d 3h)
+  └ 1B processed tokens · 11.3M uncached tokens · 3317 calls · local activity
+5-hour: ●○○○○○○○○○○○ 5% used · resets 20:10 (in 4h 32m)
+Model weekly: ○○○○○○○○○○○○ 0% used · resets Thu Sep 24 19:00 (in 4d 3h)
+---
+● Claude Personal · PRO
+Weekly: ●●○○○○○○○○○○ 13% used · resets Mon Sep 21 04:00 (in 12h 37m)
+---
+● Codex
+⚠ Not logged in; run codex login
+---
+● DeepSeek
+⚠ No API key in Pi auth
+```
+
+Providers are composed in the `run()` call at the bottom of the plugin file, in
+display order:
+
+```python
+run(
+    claude(),                      # ~/.claude
+    claude(ClaudeProfile(name="Claude Personal", config_dir=f"{HOME}/.pclaude")),
+    codex(),
+    deepseek(),
+    show_clear_cache=True,
+)
+```
+
+Credentials are read where each agent already stores them — the Claude Code
+Keychain entry, the Codex and Kimi auth files, the Pi auth file for DeepSeek —
+and nothing is written back except a refreshed OAuth token. OpenAI prices are
+fetched on demand and cached for a month, falling back to a stale cache and
+then to no cost estimates.
+
+---
+
+## [hn.1h.py](plugins/hn.1h.py)
+
+Hacker News posts over a score threshold, with a macOS notification the first
+time each one crosses it.
+
+```
+HN (3)
+---
+🔥 1662 - AI-generated posters don't have to be horrible | href=https://john.hartnup.uk/... length=60
+--💬 View HN comments | href=https://news.ycombinator.com/item?id=49764791
+--⏱️ 12h left
+🔥 1245 - I built non-autoregressive decision models with RL a year ago | href=https://laya.convaiinnovations.com/ length=60
+--💬 View HN comments | href=https://news.ycombinator.com/item?id=49765348
+--⏱️ 12h left
+---
+Refresh | refresh=true
+```
+
+`run(min_score=700, display_hours=12)`. Seen posts are remembered in
+`~/Library/Caches/swiftbar-plugins/hn/posts.json` so they are not re-notified;
+a cold start that matches dozens summarises them into one banner instead of a
+burst.
+
+---
+
+## [kubecontext.1m.py](plugins/kubecontext.1m.py)
+
+The active kubeconfig context, and a menu to switch. Clicking a row runs
+`kubectl config use-context` and refreshes.
+
+```
+prod-cluster
+---
+○ colima | refresh=true bash=/opt/homebrew/bin/kubectl param1=config param2=use-context param3=colima
+● prod-cluster/api.example.com:6443/me@example.com | refresh=true bash=/opt/homebrew/bin/kubectl param1=config ...
+○ staging-cluster/api.example.com:6443/me@example.com | refresh=true bash=/opt/homebrew/bin/kubectl param1=config ...
+```
+
+`run(short_names=True)` trims the menu bar label at the first `/`, which is
+what keeps an ARN-style context readable. Needs `kubectl`; a missing one is
+reported in the dropdown rather than failing silently.
+
+---
+
+## [pollen.1h.py](plugins/pollen.1h.py)
+
+Pollen levels for a Swedish city, as a percentage of the 7-point scale.
+
+```
+🌿 Björk 0%
+---
+Al 0%
+Alm 0%
+Ambrosia 0%
+Björk 0%
+Bok 0%
+Ek 0%
+Gråbo 0%
+Gräs 0%
+Hassel 0%
+Sälg/Vide 0%
+```
+
+`run(city="Göteborg", highlight=("bjork",))` — `highlight` picks what reaches
+the menu bar; it falls back to the worst pollen of the day. Data from
+pollenkoll.se.
+
+---
+
+## [soltid.1h.py](plugins/soltid.1h.py)
+
+How long you can stay in the sun before burning, from
+Strålsäkerhetsmyndigheten.
+
+```
+☀️ 1h 45m
+---
+Så många timmar och minuter kan du vistas ute i/på Sverige (Göteborg)
+1h 45m i direkt solljus
+Resten av dagen i lite skugga
+Resten av dagen i mycket skugga
+```
+
+`run(latitude=57.71, longitude=11.0, skin_type=2)` — `skin_type` is the
+Fitzpatrick scale 1-6, as on the agency's own form. Shows ✅ when the UV index
+is low enough that the rest of the day is safe.
+
+---
+
+## [goldenhour.1h.py](plugins/goldenhour.1h.py)
+
+This evening's golden hour.
+
+```
+🌇 18:28 - 19:18 🌇
+---
+Göteborg, Sweden | href=https://meteogram.org/sun/sweden/goteborg/
+```
+
+`run(country="sweden", city="goteborg")` — the path segments of a
+meteogram.org sun page. Scraped with stdlib `html.parser`, since the site has
+no API; a redesign of that page is what will break this one.
+
+---
+
+## [spotifyvolume.5m.py](plugins/spotifyvolume.5m.py)
+
+Read and set Spotify's volume, rounded to the nearest ten so the label does not
+jitter.
+
+```
+🔉 30%
+---
+20% | bash=spotify_volume param1=set param2=20 terminal=false refresh=true
+30% | bash=spotify_volume param1=set param2=30 terminal=false refresh=true checked=true
+50% | bash=spotify_volume param1=set param2=50 terminal=false refresh=true
+70% | bash=spotify_volume param1=set param2=70 terminal=false refresh=true
+```
+
+When Spotify is closed, or the `spotify_volume` helper is not on `PATH`:
+
+```
+Spotify
+---
+spotify_volume not found on PATH
+```
+
+---
+
+## How plugins run
 
 Plugins are stdlib-only and carry [PEP 723](https://peps.python.org/pep-0723/)
 metadata in the shebang:
@@ -55,13 +222,13 @@ uv provisions and caches its own interpreter, which matters because SwiftBar
 launches plugins from a GUI context: `PATH` is the launchd minimum, so a
 version manager's shim is invisible and `/usr/bin/python3` is whatever macOS
 shipped — 3.9 on current systems. Pinning here means the Python that runs a
-plugin is the Python it was written against. uv is referenced by absolute path
-for the same reason.
+plugin is the one it was written against. uv is referenced by absolute path for
+the same reason.
 
-There is no virtualenv and nothing to install: the toolkit is found by putting
-`lib/` on `sys.path`, because Python only adds a script's own directory. A uv
-path dependency would be tidier, but uv resolves those against the working
-directory, which SwiftBar does not control.
+There is no virtualenv and nothing to install. The toolkit is found by putting
+`lib/` on `sys.path`, because Python only adds a script's *own* directory, not
+subdirectories. A uv path dependency would be tidier, but uv resolves those
+against the working directory, which SwiftBar does not control.
 
 ## The toolkit
 
@@ -78,26 +245,28 @@ raise SystemExit(run(build, name="Example"))
 
 | Module | For |
 | --- | --- |
-| `output` | Menu rows, submenus, attribute escaping |
+| `output` | Menu rows, submenus, attribute escaping, the `unavailable()` fallback menu |
 | `plugin` | The entrypoint wrapper: a crash becomes an error row, not a stack trace |
 | `http` | JSON/text with timeouts, parallel fetches, graceful failures |
-| `state` | Small JSON state files, written atomically |
+| `data` | Reading untyped JSON without trusting its shape |
+| `state` | Small JSON state files, written atomically, optionally owner-only |
+| `jsonl_cache` | Reading append-only logs incrementally across runs |
 | `shell` | Finding and running binaries despite SwiftBar's minimal `PATH` |
 | `notify` | macOS notifications, with AppleScript quoting handled |
 | `ansi` | Semantic colours for menu rows |
 | `meters` | Progress bars and compact number formatting |
 | `dates` | Parsing the timestamp shapes APIs return |
 
-Escaping is the reason this exists: SwiftBar splits a row on its first `|`, so
-any title containing one silently truncates unless it is escaped. `Menu` does
-that everywhere.
+Escaping is the reason the toolkit exists: SwiftBar splits a row on its first
+`|`, so any title containing one silently truncates. `Menu` handles that
+everywhere, which none of these plugins did before.
 
 ## Adding a plugin
 
 Copy the shebang block from an existing plugin, write a module docstring that
 documents it, build a `Menu`, and put the configuration in the `run(...)` call
-at the bottom so it is visible in one place. Name the file
-`<name>.<interval>.py` and run `make install`.
+at the bottom so it is visible in one place. Name it `<name>.<interval>.py`
+under `plugins/` and run `make install`.
 
 ## Development
 
@@ -105,6 +274,5 @@ at the bottom so it is visible in one place. Name the file
 make test     # offline suite
 make check    # lint, then run every plugin as SwiftBar would
 make fmt      # format and autofix
+make test-live  # hits real APIs; needs you logged in
 ```
-
-`make test-live` hits every agent provider's real API and needs you logged in.

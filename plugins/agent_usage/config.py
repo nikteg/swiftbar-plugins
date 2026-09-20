@@ -11,14 +11,11 @@ import os
 from swiftbar.ansi import COLORS as MENU_COLORS
 from swiftbar.http import DEFAULT_TIMEOUT as TIMEOUT_SECONDS
 from swiftbar.meters import BAR_WIDTH
+from swiftbar.state import state_dir
 
 HOME = os.environ.get("HOME", "")
 
-CACHE_DIR = os.environ.get("SWIFTBAR_PLUGIN_CACHE_PATH") or (
-    f"{HOME}/Library/Caches/agent-usage-swiftbar-plugin"
-    if HOME
-    else "/tmp/agent-usage-swiftbar-plugin"
-)
+CACHE_DIR = str(state_dir("agent-usage"))
 
 KEYCHAIN_ACCOUNT = next(
     (part for part in reversed(HOME.split("/")) if part), "claude-code"

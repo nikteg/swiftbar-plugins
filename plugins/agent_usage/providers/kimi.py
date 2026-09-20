@@ -5,6 +5,8 @@ from __future__ import annotations
 import os
 from typing import Any
 
+from swiftbar.state import write_json
+
 from ..config import HOME
 from ..sources.pi import PiUsageEvent, collect_pi_usage_events, parse_pi_usage_event
 from ..types import (
@@ -30,7 +32,6 @@ from ..utils import (
     post_json,
     read_json,
     string_at,
-    write_private_json,
 )
 
 KIMI_CLIENT_ID = "17e5f671-d194-4dfb-9706-5516cb48c098"
@@ -182,7 +183,7 @@ def _refresh_token(auth: dict) -> str:
         raise RuntimeError(LOGIN_HINT) from None
 
     access_token = apply_kimi_token_response(kimi, response)
-    write_private_json(os.path.join(HOME, ".pi", "agent", "auth.json"), auth)
+    write_json(os.path.join(HOME, ".pi", "agent", "auth.json"), auth, private=True)
 
     return access_token
 

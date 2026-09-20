@@ -65,9 +65,7 @@ def run(short_names: bool = True) -> int:
         kubectl = which("kubectl")
 
         if kubectl is None:
-            menu.title("⎈ —")
-            menu.sep()
-            menu.item("kubectl not found on PATH")
+            menu.unavailable("⎈ —", "kubectl not found on PATH")
 
             return
 

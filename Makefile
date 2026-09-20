@@ -1,13 +1,13 @@
 PLUGIN_DIR ?= $(HOME)/swiftbar
 UV ?= /opt/homebrew/bin/uv
 
-# Every top-level file named <name>.<interval>.py is a plugin.
+# Every file in plugins/ named <name>.<interval>.py is a plugin.
 PLUGINS := $(notdir $(wildcard plugins/*.[0-9]*[smhd].py))
 
-.PHONY: install uninstall list clear-cache test test-live check fmt
+.PHONY: install uninstall list test test-live check fmt
 
-# Plugins are symlinked, so an edit in this checkout takes effect on the next
-# SwiftBar refresh and each file finds lib/ by resolving its own symlink.
+# Plugins are symlinked, so an edit here takes effect on the next SwiftBar
+# refresh and each file finds lib/ by resolving its own symlink.
 install:
 	@mkdir -p "$(PLUGIN_DIR)"
 	@for plugin in $(PLUGINS); do \
@@ -23,17 +23,16 @@ uninstall:
 list:
 	@for plugin in $(PLUGINS); do echo "$$plugin"; done
 
-clear-cache:
-	./plugins/agent-usage.15m.py --clear-cache
-
 test:
 	$(UV) run --quiet pytest -q $(ARGS)
 
-# Hits every provider's live API; needs you to be logged in.
-test-live:
-	$(UV) run --quiet pytest -q tests/live_agent_usage.py $(ARGS)
+LIVE_TESTS := $(wildcard tests/live_*.py)
 
-# Runs each plugin exactly as SwiftBar would, which also proves the shebang.
+# Hits real APIs and needs you logged in, so it is not part of `make check`.
+test-live:
+	$(UV) run --quiet pytest -q $(LIVE_TESTS) $(ARGS)
+
+# Runs every plugin exactly as SwiftBar would, which also proves the shebang.
 check:
 	$(UV) run --quiet ruff check .
 	@for plugin in $(PLUGINS); do \

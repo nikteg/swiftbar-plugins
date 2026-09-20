@@ -1,4 +1,11 @@
-"""Incremental JSONL ingestion shared by every session-log source."""
+"""Incremental reading of append-only JSONL files across plugin runs.
+
+A SwiftBar plugin is a fresh process every refresh, so anything that scans
+a growing log re-reads it from the start unless it remembers where it got
+to. This keeps a byte offset and the events parsed so far for each file,
+reads only what has been appended, and rescans from scratch when a file is
+truncated, rewritten in place, or the parser version changes.
+"""
 
 from __future__ import annotations
 
@@ -6,43 +13,7 @@ import json
 import os
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
-from typing import Any, TypeVar
-
-SESSION_CACHE_FILENAMES = ("codex-sessions.json", "pi-sessions.json")
-SESSION_CACHE_PREFIXES = ("claude-sessions-",)
-
-E = TypeVar("E")
-
-
-def clear_session_caches(directory: str) -> int:
-    """Removes only cache files owned by this plugin, never logs or credentials."""
-    removed = 0
-
-    for filename in SESSION_CACHE_FILENAMES:
-        removed += _remove(os.path.join(directory, filename))
-
-    try:
-        names = os.listdir(directory)
-    except FileNotFoundError:
-        return removed
-
-    for name in names:
-        if name.endswith(".json") and name.startswith(SESSION_CACHE_PREFIXES):
-            path = os.path.join(directory, name)
-
-            if os.path.isfile(path):
-                removed += _remove(path)
-
-    return removed
-
-
-def _remove(path: str) -> int:
-    try:
-        os.remove(path)
-
-        return 1
-    except FileNotFoundError:
-        return 0
+from typing import Any
 
 
 @dataclass
@@ -55,7 +26,7 @@ class _CachedFile:
 
 
 @dataclass
-class JsonlCache:
+class JsonlCache[E]:
     """Reuses parsed JSONL events across SwiftBar runs, reading only new bytes.
 
     A parser-version change, truncation, or in-place rewrite forces a safe full
@@ -204,7 +175,7 @@ class JsonlCache:
                 for path, cached in files.items()
             },
         }
-        temporary = f"{self.cache_path}.agent-usage-{os.getpid()}.tmp"
+        temporary = f"{self.cache_path}.{os.getpid()}.tmp"
 
         try:
             os.makedirs(os.path.dirname(self.cache_path) or ".", exist_ok=True)

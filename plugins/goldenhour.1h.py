@@ -85,9 +85,7 @@ def run(country: str = "sweden", city: str = "goteborg") -> int:
         times = " ".join(scraper.times.split())
 
         if not times:
-            menu.title("🌇 —")
-            menu.sep()
-            menu.item(f"No golden hour found for {city}", href=url)
+            menu.unavailable("🌇 —", f"No golden hour found for {city}", href=url)
 
             return
 

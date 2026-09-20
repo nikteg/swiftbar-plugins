@@ -8,8 +8,9 @@ from collections.abc import Iterable
 from dataclasses import asdict, dataclass
 from typing import Any
 
+from swiftbar.jsonl_cache import JsonlCache
+
 from ..config import CACHE_DIR, HOME
-from ..session_cache import JsonlCache
 from ..utils import (
     MS_PER_DAY,
     now_ms,

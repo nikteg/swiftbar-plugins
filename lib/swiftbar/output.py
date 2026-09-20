@@ -115,6 +115,17 @@ class Menu:
         """Appends an already-formatted line, for output the API cannot express."""
         self._lines.append(line)
 
+    def unavailable(self, title: str, reason: str, **attrs: Any) -> Item:
+        """The "cannot show anything right now" menu, which most plugins need.
+
+        A missing binary or an empty API response is an ordinary state, not a
+        failure, so it gets a plain menu rather than the error styling.
+        """
+        self.title(title)
+        self.sep()
+
+        return self.item(reason, **attrs)
+
     def refresh_item(self, label: str = "Refresh") -> Item:
         return self.item(label, refresh=True)
 

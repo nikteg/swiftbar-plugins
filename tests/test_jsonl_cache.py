@@ -5,11 +5,8 @@ import tempfile
 import time
 import unittest
 
-from agent_usage.session_cache import (
-    SESSION_CACHE_FILENAMES,
-    JsonlCache,
-    clear_session_caches,
-)
+from agent_usage.cache import SESSION_CACHE_FILENAMES, clear_session_caches
+from swiftbar.jsonl_cache import JsonlCache
 
 
 class JsonlCacheTest(unittest.TestCase):

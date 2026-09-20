@@ -9,6 +9,8 @@ from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from typing import Any
 
+from swiftbar.jsonl_cache import JsonlCache
+
 from ..config import CACHE_DIR, HOME, MENU_COLORS
 from ..pricing.codex import (
     CODEX_CREDITS_PER_USD,
@@ -16,7 +18,6 @@ from ..pricing.codex import (
     codex_credits,
     pricing_cache_version,
 )
-from ..session_cache import JsonlCache
 from ..sources.pi import PiUsageEvent, collect_pi_usage_events, parse_pi_usage_event
 from ..types import (
     ActivityExtension,

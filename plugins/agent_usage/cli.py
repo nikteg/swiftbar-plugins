@@ -6,10 +6,10 @@ import os
 import sys
 from collections.abc import Sequence
 
+from .cache import clear_session_caches
 from .config import CACHE_DIR
 from .registry import collect_provider_results
 from .render import RenderOptions, render_results
-from .session_cache import clear_session_caches
 from .types import PluginOptions, ProviderExtension, ProviderResult
 
 
