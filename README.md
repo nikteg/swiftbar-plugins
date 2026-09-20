@@ -237,35 +237,30 @@ the package next to its callers avoids both.
 ## The toolkit
 
 ```python
-from sources import hackernews
-from swiftbar_lib.output import render
-from swiftbar_lib.plugin import guard
+from swiftbar_lib.output import show
 from swiftbar_lib.ui import Item, Node, Refresh, Separator, Title
 
 
-def Post(post) -> Node:
+def Story(post, display_hours, now) -> Node:
     return Item(
         f"🔥 {post.score} - {post.title}",
         Item("💬 View HN comments", href=post.comments_url),  # children positional
-        href=post.url,  # attributes keyword
+        Item(f"⏱️ {post.hours_left(display_hours, now):.0f}h left"),
+        href=post.url,                                        # attributes keyword
+        length=60,
     )
 
 
 if __name__ == "__main__":
-
     min_score = 700
-    posts = hackernews.popular(min_score=min_score, display_hours=12)
+    posts = popular(min_score=min_score, display_hours=12, ...)
 
-    print(
-        render(
-            [
-                Title(f"HN ({len(posts)})" if posts else "HN"),
-                [Post(post) for post in posts]  # a list is a fragment
-                or Item("No popular posts yet"),  # `or` gives the empty case
-                Separator() if posts else None,  # None renders nothing
-                Refresh(),
-            ]
-        )
+    show(
+        Title(f"HN ({len(posts)})" if posts else "HN"),
+        [Story(post, 12, now) for post in posts]   # a list is a fragment
+        or Item("No popular posts yet"),           # `or` gives the empty case
+        Separator() if posts else None,            # None renders nothing
+        Refresh(),
     )
 ```
 
