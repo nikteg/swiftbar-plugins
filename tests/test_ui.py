@@ -77,5 +77,27 @@ class RenderTest(unittest.TestCase):
         self.assertEqual(render(Title("just the bar")), "just the bar")
 
 
+class AttributeSafetyTest(unittest.TestCase):
+    def test_a_newline_in_an_attribute_cannot_forge_a_row(self):
+        # SwiftBar splits into rows before it parses quotes, so quoting alone
+        # would let an embedded newline emit a second, working row.
+        output = render(
+            [
+                Title("t"),
+                Item("go", bash="/bin/x", params=["a\nInjected | bash=/bin/y"]),
+            ]
+        )
+
+        self.assertEqual(len(output.splitlines()), 3)
+
+    def test_rejects_a_string_as_params(self):
+        with self.assertRaises(TypeError):
+            render([Title("t"), Item("go", params="--flag")])
+
+    def test_rejects_a_title_nested_in_a_submenu(self):
+        with self.assertRaises(ValueError):
+            render([Title("t"), Item("parent", Title("lost"))])
+
+
 if __name__ == "__main__":
     unittest.main()

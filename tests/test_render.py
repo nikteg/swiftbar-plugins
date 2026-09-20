@@ -299,5 +299,20 @@ def _index(lines, needle):
     return next(index for index, line in enumerate(lines) if needle in line)
 
 
+class UsageColorTest(unittest.TestCase):
+    def test_a_failed_provider_is_red_even_when_it_reports_activity(self):
+        # DeepSeek returns local activity on an HTTP error, and its budget
+        # reads 0% with no spend, which used to paint the menu bar green.
+        extension = next(e for e in EXTENSIONS if e.id == "deepseek")
+        result = ProviderResult(
+            name="DeepSeek",
+            extension_id="deepseek",
+            error="HTTP 503",
+            activity=[ActivityWindow(label="Weekly"), ActivityWindow(label="5-hour")],
+        )
+
+        self.assertIn("\x1b[31m", Icon(Usage(extension, result)))
+
+
 if __name__ == "__main__":
     unittest.main()

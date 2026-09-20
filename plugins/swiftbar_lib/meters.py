@@ -30,7 +30,9 @@ def compact_number(value: float) -> str:
     """Formats like Intl compact notation: 1.2K, 3.4M, 12."""
 
     for limit, suffix in ((1e12, "T"), (1e9, "B"), (1e6, "M"), (1e3, "K")):
-        if abs(value) >= limit:
+        # Rounded first: at 999.95 the unrounded value is under 1e3 but the
+        # rendered one is not, which used to print "1000" instead of "1K".
+        if abs(round_half_up(value, 1)) >= limit:
             return _trim(round_half_up(value / limit, 1)) + suffix
 
     return _trim(round_half_up(value, 1))

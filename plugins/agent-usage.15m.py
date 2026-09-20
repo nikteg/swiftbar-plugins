@@ -109,6 +109,12 @@ def _budget_percent(
 def _usage_color(usage: Usage) -> int:
     result, extension = usage.result, usage.provider
 
+    # First: a provider that failed is not healthy, whatever else it reported.
+    # DeepSeek returns local activity even on an HTTP error, and its budget
+    # reads 0% when there has been no spend, which used to paint this green.
+    if result.error:
+        return COLORS["critical"]
+
     if result.meters:
         return COLORS[level_for(max(m.used_percent for m in result.meters))]
 
@@ -123,9 +129,6 @@ def _usage_color(usage: Usage) -> int:
 
     if any(a.total_tokens > 0 or a.calls > 0 for a in result.activity):
         return COLORS["activity"]
-
-    if result.error:
-        return COLORS["critical"]
 
     return COLORS["unknown"]
 

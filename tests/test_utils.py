@@ -79,5 +79,12 @@ class TextTest(unittest.TestCase):
         self.assertEqual(len(clean_error(RuntimeError("x" * 200))), 100)
 
 
+class CompactNumberTest(unittest.TestCase):
+    def test_picks_its_unit_after_rounding(self):
+        self.assertEqual(compact_number(999.95), "1K")
+        self.assertEqual(compact_number(999.4), "999.4")
+        self.assertEqual(compact_number(1_500), "1.5K")
+
+
 if __name__ == "__main__":
     unittest.main()

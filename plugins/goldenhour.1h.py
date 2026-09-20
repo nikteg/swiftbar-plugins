@@ -36,6 +36,12 @@ from swiftbar_lib.output import show
 from swiftbar_lib.ui import Title
 
 BASE_URL = "https://meteogram.org/sun"
+
+#: html.parser reports no end tag for these, so counting them as nesting would
+#: leave the cell open for the rest of the document.
+VOID_TAGS = frozenset(
+    "area base br col embed hr img input link meta param source track wbr".split()
+)
 EVENING_CELL_CLASS = "avond_goudenhour"
 
 
@@ -68,7 +74,7 @@ class Scraper(HTMLParser):
 
         if tag == "td" and self._cell_class in (values.get("class") or "").split():
             self._depth = 1
-        elif self._depth:
+        elif self._depth and tag not in VOID_TAGS:
             self._depth += 1
 
     def handle_endtag(self, tag: str) -> None:

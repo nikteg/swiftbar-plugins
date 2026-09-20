@@ -37,7 +37,9 @@ def _value(value: Any) -> str:
     if isinstance(value, bool):
         return "true" if value else "false"
 
-    text = str(value)
+    # Quoting cannot save a newline: SwiftBar splits into rows before it parses
+    # quotes, so an embedded one forges a second, fully functional row.
+    text = _ALL_CONTROL_OR_PIPE.sub(" ", str(value))
 
     if not text or _NEEDS_QUOTING.search(text):
         return '"{}"'.format(text.replace("\\", "\\\\").replace('"', '\\"'))
