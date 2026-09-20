@@ -1,7 +1,8 @@
 """What a plugin file needs from this package: collection and cache actions.
 
-The menu itself is assembled in the plugin file out of the components in
-``render``, so the shape of the dropdown is visible where it is configured.
+No menu code lives in this package. The plugin file owns every component and
+assembles the tree itself, so the shape of the dropdown is visible where it is
+configured.
 """
 
 from __future__ import annotations

@@ -16,15 +16,20 @@ directory as the plugin files, which is the one place Python puts on
 """
 
 from .ansi import RESET, colorize, level_for
+from .components import Action, Link, MenuBar, Meter
 from .dates import parse_date, relative
 from .meters import bar, clamp_percent, compact_number, round_half_up
 from .notify import notify
-from .output import escape, escape_strict, render
+from .output import escape, escape_strict, render, show
 from .plugin import clean_error, error_menu, guard, is_action
 from .shell import is_running, which
 from .ui import Item, Refresh, Separator, Title
 
 __all__ = [
+    "Meter",
+    "MenuBar",
+    "Link",
+    "Action",
     "Item",
     "Refresh",
     "Separator",
@@ -39,6 +44,7 @@ __all__ = [
     "escape",
     "escape_strict",
     "render",
+    "show",
     "is_action",
     "is_running",
     "level_for",

@@ -108,3 +108,14 @@ def render(node) -> str:
     head = [format_line(t.text, 0, **t.attrs) for t in titles] or ["?"]
 
     return "\n".join([*head, SEPARATOR, *body]) if body else "\n".join(head)
+
+
+def show(node) -> None:
+    """Writes a rendered tree to stdout, which is where SwiftBar reads it.
+
+    Separate from ``render`` rather than a flag on it: a plugin only ever
+    wants it printed, and a test only ever wants the string, so a boolean
+    deciding between returning and printing would just be two functions
+    sharing a name.
+    """
+    print(render(node))

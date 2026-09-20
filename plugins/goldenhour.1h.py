@@ -27,23 +27,83 @@ Refresh
     Hourly, from the ``1h`` in this file's name. Rename to change it.
 """
 
-from sources import meteogram
-from swiftbar_lib.output import render
+from dataclasses import dataclass
+from html.parser import HTMLParser
+
+from swiftbar_lib.components import Link
+from swiftbar_lib.http import get_text
+from swiftbar_lib.output import show
 from swiftbar_lib.plugin import guard
-from swiftbar_lib.ui import Item, Title
+from swiftbar_lib.ui import Title
+
+BASE_URL = "https://meteogram.org/sun"
+EVENING_CELL_CLASS = "avond_goudenhour"
+
+
+@dataclass(frozen=True)
+class Evening:
+    times: str
+    location: str
+    url: str
+
+
+class Scraper(HTMLParser):
+    """Pulls one table cell and the description meta tag out of the page.
+
+    stdlib rather than a parser dependency: two values are not worth a wheel,
+    and a plugin that installs nothing cannot break on a stale one.
+    """
+
+    def __init__(self, cell_class: str) -> None:
+        super().__init__(convert_charrefs=True)
+        self._cell_class = cell_class
+        self._depth = 0
+        self.times: str = ""
+        self.description: str = ""
+
+    def handle_starttag(self, tag: str, attrs) -> None:
+        values = dict(attrs)
+
+        if tag == "meta" and values.get("name") == "description":
+            self.description = values.get("content") or ""
+
+        if tag == "td" and self._cell_class in (values.get("class") or "").split():
+            self._depth = 1
+        elif self._depth:
+            self._depth += 1
+
+    def handle_endtag(self, tag: str) -> None:
+        if self._depth:
+            self._depth -= 1
+
+    def handle_data(self, data: str) -> None:
+        if self._depth:
+            self.times += data
+
+
+def evening(country: str, city: str) -> Evening:
+    """Tonight's golden hour. ``times`` is empty when the page has no cell."""
+    url = f"{BASE_URL}/{country}/{city}/"
+    scraper = Scraper(EVENING_CELL_CLASS)
+    scraper.feed(get_text(url))
+
+    return Evening(
+        times=" ".join(scraper.times.split()),
+        location=scraper.description.split("-")[0].strip() or city,
+        url=url,
+    )
+
 
 if __name__ == "__main__":
     guard(name="Golden hour", icon="🌇")
 
-    tonight = meteogram.evening(country="sweden", city="goteborg")
+    tonight = evening(country="sweden", city="goteborg")
 
-    print(
-        render(
-            [
-                Title(f"🌇 {tonight.times} 🌇") if tonight.times else Title("🌇 —"),
-                Item(tonight.location, href=tonight.url)
-                if tonight.times
-                else Item("No golden hour found on the page", href=tonight.url),
-            ]
-        )
+    show(
+        [
+            Title(f"🌇 {tonight.times} 🌇") if tonight.times else Title("🌇 —"),
+            Link(tonight.location, tonight.url)
+            if tonight.times
+            else Link("No golden hour found on the page", tonight.url),
+        ]
     )

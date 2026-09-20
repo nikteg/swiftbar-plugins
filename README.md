@@ -4,16 +4,14 @@ My [SwiftBar](https://github.com/swiftbar/SwiftBar) plugins, in Python, sharing
 one small toolkit.
 
 ```
-plugins/              one file per plugin: the menu it describes, nothing else
-plugins/swiftbar_lib/     the toolkit every plugin shares
-plugins/sources/      where each plugin's data comes from, one module per source
-plugins/agent_usage/  local to agent-usage, which outgrew a single module
+plugins/              one self-contained file per plugin
+plugins/swiftbar_lib/ the toolkit every plugin shares
+plugins/agent_usage/  agent-usage's data collection; no menu code
 tests/                offline test suite
 ```
 
-A plugin file is the menu and its configuration, and nothing else — fetching
-and parsing live in `plugins/sources/`, so tweaking what a menu shows means
-editing a few lines of tree. Every plugin documents itself: open the file to
+A plugin is one file: how it gets its data, the components it needs, and the
+menu itself at the bottom. Every plugin documents itself, so open the file to
 see what it shows, what you can configure and where its data comes from. The examples below are the actual
 output each one prints — SwiftBar reads a line of text, then `---`, then the
 dropdown, with `key=value` attributes after a `|`.
@@ -286,6 +284,7 @@ wrapper needs a callback is to get the failure inside its own `try`.
 | Module | For |
 | --- | --- |
 | `ui` | The node types: `Title`, `Item`, `Separator`, `Refresh` |
+| `components` | Rows that recur: `Meter`, `Action`, `Link`, `MenuBar` |
 | `output` | Rendering a node tree to SwiftBar's line format, and the escaping |
 | `plugin` | `guard`, the error boundary: a crash becomes an error row, not a stack trace |
 | `http` | JSON/text with timeouts, parallel fetches, graceful failures |

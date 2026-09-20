@@ -2,7 +2,6 @@ import re
 import unittest
 from datetime import UTC, datetime, timedelta
 
-from agent_usage.render import ClearCache, Icon, Provider
 from agent_usage.types import (
     ActivityExtension,
     ActivityWindow,
@@ -15,8 +14,24 @@ from agent_usage.types import (
 )
 from builtins_fixture import EXTENSIONS
 from builtins_fixture import LOCAL_ACTIVITY_BUDGETS as BUDGETS
+from plugin_loader import load
+from swiftbar_lib.components import Action, MenuBar
 from swiftbar_lib.output import render
-from swiftbar_lib.ui import Separator, Title
+from swiftbar_lib.ui import Separator
+
+plugin = load("agent-usage.15m.py")
+Icon, Provider = plugin.Icon, plugin.Provider
+
+
+def pair(result, providers):
+    """Finds a result's provider.
+
+    A plugin file names both and pairs them by hand; these tests build results
+    from fixtures, so they look the provider up instead.
+    """
+    by_id = next((e for e in providers if e.id == result.extension_id), None)
+
+    return by_id or next((e for e in providers if e.name == result.name), None)
 
 
 def show(
@@ -25,19 +40,15 @@ def show(
     """Assembles the menu the way a plugin file does, then renders it."""
     providers = EXTENSIONS if extensions is None else extensions
     options = options or PluginOptions()
+    paired = [(result, pair(result, providers)) for result in results]
 
     return render(
         [
-            Title(
-                " ".join(Icon(result, providers) for result in results),
-                ansi=True,
-                symbolize=False,
-                font="Menlo",
-                size=13,
-                dropdown=False,
-            ),
-            [[Provider(result, providers), Separator()] for result in results],
-            ClearCache(plugin_path if options.show_clear_cache else None),
+            MenuBar(" ".join(Icon(result, ext) for result, ext in paired)),
+            [[Provider(result, ext), Separator()] for result, ext in paired],
+            Action("Clear local usage caches", plugin_path, "--clear-cache")
+            if options.show_clear_cache
+            else None,
         ]
     )
 

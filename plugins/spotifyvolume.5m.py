@@ -17,8 +17,8 @@ Shows
     Nothing but "Spotify not running" when Spotify is closed.
 
 Configure
-    Edit the call at the bottom of this file.
-      presets  The volume percentages offered in the dropdown.
+    Edit the menu at the bottom of this file. Each preset is one row, so
+    adding or changing one is a line.
 
 Requires
     The ``spotify_volume`` helper on PATH, which this plugin shells out to for
@@ -29,44 +29,57 @@ Refresh
     refreshes immediately, so the interval only matters for outside changes.
 """
 
-from sources import spotify
-from swiftbar_lib.output import render
+from swiftbar_lib.components import Action
+from swiftbar_lib.output import show
 from swiftbar_lib.plugin import guard
+from swiftbar_lib.shell import is_running, run, which
 from swiftbar_lib.ui import Item, Node, Title
+
+PROCESS = "Spotify"
+HELPER = "spotify_volume"
+
+
+def volume(helper: str) -> int:
+    """The current volume, rounded to the nearest ten so labels do not jitter."""
+    return (int(run([helper, "get"]).strip()) + 5) // 10 * 10
+
+
+def speaker_icon(level: int) -> str:
+    if level <= 23:
+        return "🔈"
+
+    if level <= 33:
+        return "🔉"
+
+    return "🔊"
 
 
 def Preset(preset: int, current: int, helper: str) -> Node:
     """One volume row, checked when it matches the current level."""
-    return Item(
-        f"{preset}%",
-        bash=helper,
-        params=["set", str(preset)],
-        terminal=False,
-        refresh=True,
-        checked=preset == current,
-    )
+    return Action(f"{preset}%", helper, "set", preset, checked=preset == current)
 
 
 if __name__ == "__main__":
     guard(name="Spotify volume", icon="🔇")
 
-    presets = (20, 30, 50, 70)
+    running = is_running(PROCESS)
+    helper = which(HELPER) if running else None
+    level = volume(helper) if helper else None
 
-    helper = spotify.binary() if spotify.running() else None
-    level = spotify.volume(helper) if helper else None
-    missing = (
-        "Spotify not running" if not spotify.running() else "spotify_volume not on PATH"
-    )
-
-    print(
-        render(
+    show(
+        [
+            Title(f"{speaker_icon(level)} {level}%")
+            if level is not None
+            else Title("Spotify"),
             [
-                Title(f"{spotify.speaker_icon(level)} {level}%")
-                if level is not None
-                else Title("Spotify"),
-                [Preset(preset, level, helper) for preset in presets]
-                if helper
-                else Item(missing),
+                Preset(20, level, helper),
+                Preset(30, level, helper),
+                Preset(50, level, helper),
+                Preset(70, level, helper),
             ]
-        )
+            if helper
+            else Item(
+                "Spotify not running" if not running else f"{HELPER} not on PATH"
+            ),
+        ]
     )

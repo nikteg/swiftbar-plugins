@@ -1,4 +1,4 @@
-"""Data carried between providers, the registry, and the renderer."""
+"""Data carried between providers, the registry, and the plugin file."""
 
 from __future__ import annotations
 

@@ -8,7 +8,12 @@ Composition
     ``agent-usage.15m.py`` imports the factories re-exported here and passes
     them to ``run()``. Argument order is display order.
 
-        print(render(Providers(claude(), codex(), kimi(), deepseek())))
+        results = collect([claude(), codex(), kimi(), deepseek()])
+
+Rendering
+    None of it lives here. The plugin file owns every component, so this
+    package is collection only: providers, a registry, pricing and the
+    transcript sources they read.
 
 Adding a provider
     A provider is a ``ProviderExtension``: an id, a display name, the auth and
@@ -33,7 +38,7 @@ Layout
     sources/    session-transcript readers, provider-neutral
     pricing/    model price catalogue and cost maths
     registry.py collects every extension in parallel, isolating failures
-    render.py   turns results into menu rows
+    cli.py      what a plugin file calls: collect() and the cache actions
 """
 
 from .cli import clear_cache, clear_cache_requested, collect, plugin_path
@@ -43,18 +48,18 @@ from .providers.codex import CodexOptions
 from .providers.codex import create_codex_extension as codex
 from .providers.deepseek import create_deepseek_extension as deepseek
 from .providers.kimi import create_kimi_extension as kimi
-from .render import ClearCache, Icon, Provider
+from .types import ActivityWindow, ProviderExtension, ProviderResult
 
 __all__ = [
+    "ProviderResult",
+    "ProviderExtension",
+    "ActivityWindow",
     "ClaudeProfile",
     "CodexOptions",
     "claude",
     "codex",
     "deepseek",
     "kimi",
-    "ClearCache",
-    "Icon",
-    "Provider",
     "clear_cache",
     "collect",
     "plugin_path",

@@ -28,20 +28,52 @@ Refresh
     Every minute, from the ``1m`` in this file's name. Rename to change it.
 """
 
-from sources import kubectl
-from swiftbar_lib.output import render
+from dataclasses import dataclass
+
+from swiftbar_lib.components import Action
+from swiftbar_lib.output import show
 from swiftbar_lib.plugin import guard
+from swiftbar_lib.shell import run, which
 from swiftbar_lib.ui import Item, Node, Title
 
 
-def Context(context: kubectl.Context, binary: str) -> Node:
-    """One switchable row. Clicking it runs kubectl and refreshes the menu."""
-    return Item(
+@dataclass(frozen=True)
+class Context:
+    name: str
+    active: bool
+
+    @property
+    def short_name(self) -> str:
+        """Trims at the first ``/``, which keeps an ARN-style name readable."""
+        return self.name.partition("/")[0]
+
+
+def contexts(kubectl: str) -> list[Context]:
+    """Every context, sorted by name. kubectl marks the active one with ``*``."""
+    found = []
+
+    for line in run([kubectl, "config", "get-contexts", "--no-headers"]).splitlines():
+        columns = line.split()
+
+        if not columns:
+            continue
+
+        if columns[0] == "*":
+            found.append(Context(columns[1], True))
+        else:
+            found.append(Context(columns[0], False))
+
+    return sorted(found, key=lambda context: context.name)
+
+
+def Switch(context: Context, kubectl: str) -> Node:
+    """One switchable row; clicking it selects that context and refreshes."""
+    return Action(
         f"{'●' if context.active else '○'} {context.name}",
-        refresh=True,
-        terminal=False,
-        bash=binary,
-        params=["config", "use-context", context.name],
+        kubectl,
+        "config",
+        "use-context",
+        context.name,
     )
 
 
@@ -50,20 +82,16 @@ if __name__ == "__main__":
 
     short_names = True
 
-    binary = kubectl.binary()
-    contexts = kubectl.contexts(binary) if binary else []
-    active = next((context for context in contexts if context.active), None)
+    kubectl = which("kubectl")
+    found = contexts(kubectl) if kubectl else []
+    active = next((context for context in found if context.active), None)
 
-    print(
-        render(
-            [
-                Title(active.short_name if short_names else active.name)
-                if active
-                else Title("⎈ —"),
-                [Context(context, binary) for context in contexts]
-                or Item(
-                    "kubectl not found on PATH" if binary is None else "No contexts"
-                ),
-            ]
-        )
+    show(
+        [
+            Title(active.short_name if short_names else active.name)
+            if active
+            else Title("⎈ —"),
+            [Switch(context, kubectl) for context in found]
+            or Item("kubectl not found on PATH" if kubectl is None else "No contexts"),
+        ]
     )

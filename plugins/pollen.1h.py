@@ -16,9 +16,9 @@ Shows
     Dropdown: every pollen reported for the city, worst first.
 
 Configure
-    Edit the call at the bottom of this file.
-      city       Must match Pollenkoll's spelling, e.g. "Göteborg".
-      highlight  Pollen keys to promote to the menu bar; see NAMES below.
+    Edit the menu at the bottom of this file. Every pollen is one row, so
+    reordering, renaming or dropping one is a line. The city must match
+    Pollenkoll's spelling, e.g. "Göteborg".
 
 Source
     pollenkoll.se's WordPress JSON API, the same endpoint their Android app
@@ -29,28 +29,62 @@ Refresh
     Hourly, from the ``1h`` in this file's name. Rename to change it.
 """
 
-from sources import pollenkoll
-from swiftbar_lib.output import render
+import urllib.parse
+from collections import defaultdict
+from datetime import date
+
+from swiftbar_lib.http import get_json
+from swiftbar_lib.output import show
 from swiftbar_lib.plugin import guard
 from swiftbar_lib.ui import Item, Title
+
+# Public API key embedded in the Pollenkoll Android client, not a personal
+# credential. The endpoint rejects requests without it.
+SECRET = "350ed0ac-3e4e-44d3-8475-4000d27de94b"
+BASE_URL = "https://pollenkoll.se/wp-json/pollenkoll-pollencounts/history"
+
+#: The Swedish scale runs 0-7.
+MAX_LEVEL = 7
+
+#: What a pollen with no reading shows.
+UNKNOWN = "—"
+
+
+def levels(city: str) -> dict[str, str]:
+    """Today's readings as pollen key -> percentage, defaulting to UNKNOWN."""
+    query = urllib.parse.urlencode(
+        {"city": city, "secret": SECRET, "platform": "android", "version": 3}
+    )
+    body = get_json(f"{BASE_URL}/{date.today().isoformat()}/?{query}")
+    cities = body if isinstance(body, list) else []
+    today = next((c for c in cities if c.get("city") == city), None)
+
+    readings = defaultdict(lambda: UNKNOWN)
+
+    for value in (today or {}).get("values", []):
+        level = max(0, min(MAX_LEVEL, value.get("level", 0)))
+        readings[value["type"]] = f"{round(level / MAX_LEVEL * 100)}%"
+
+    return readings
+
 
 if __name__ == "__main__":
     guard(name="Pollen", icon="🌿")
 
-    city = "Göteborg"
-    highlight = ("bjork",)
+    today = levels("Göteborg")
 
-    levels = pollenkoll.levels(city)
-    # Fall back to the worst pollen of the day when none are highlighted.
-    featured = [pollen for pollen in levels if pollen.key in highlight] or levels[:1]
-
-    print(
-        render(
-            [
-                [Title(f"🌿 {pollen.label}") for pollen in featured]
-                or Title(f"🌿 {city} unavailable"),
-                [Item(pollen.label) for pollen in levels]
-                or Item(f"No pollen data for {city} today"),
-            ]
-        )
+    show(
+        [
+            Title(f"🌿 Björk {today['bjork']}"),
+            Item(f"Al {today['al']}"),
+            Item(f"Alm {today['alm']}"),
+            Item(f"Ambrosia {today['ambrosia']}"),
+            Item(f"Björk {today['bjork']}"),
+            Item(f"Bok {today['bok']}"),
+            Item(f"Ek {today['ek']}"),
+            Item(f"Gråbo {today['grabo']}"),
+            Item(f"Gräs {today['gras']}"),
+            Item(f"Hassel {today['hassel']}"),
+            Item(f"Sälg/Vide {today['salg_vide']}"),
+        ]
     )
