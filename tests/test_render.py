@@ -8,7 +8,6 @@ from agent_usage.types import (
     DetailLine,
     LocalBudgetInfo,
     Meter,
-    PluginOptions,
     ProviderExtension,
     ProviderResult,
     Usage,
@@ -35,21 +34,16 @@ def pair(result, providers):
     return by_id or next((e for e in providers if e.name == result.name), None)
 
 
-def show(
-    results, extensions=None, options=None, plugin_path="/plugin/agent-usage.15m.py"
-):
+def show(results, extensions=None, plugin_path="/plugin/agent-usage.15m.py"):
     """Assembles the menu the way a plugin file does, then renders it."""
     providers = EXTENSIONS if extensions is None else extensions
-    options = options or PluginOptions()
     paired = [Usage(pair(result, providers), result) for result in results]
 
     return render(
         [
             Circles(*(Icon(usage) for usage in paired)),
             [[ProviderUsage(usage), Separator()] for usage in paired],
-            Action("Clear local usage caches", plugin_path, "--clear-cache")
-            if options.show_clear_cache
-            else None,
+            Action("Clear local usage caches", plugin_path, "--clear-cache"),
         ]
     )
 
@@ -61,7 +55,6 @@ class TitleTest(unittest.TestCase):
         self.assertIn("font=Menlo size=13", output.split("\n")[0])
         self.assertIn("\x1b[32m●\x1b[0m Codex | ansi=true", output)
         self.assertNotIn("--Weekly", output)
-        self.assertNotIn("Clear local usage caches", output)
 
     def test_renders_filled_circles_colored_by_usage_state(self):
         results = [
@@ -118,11 +111,10 @@ class ResetTest(unittest.TestCase):
 
 
 class MenuActionTest(unittest.TestCase):
-    def test_renders_an_optional_cache_clearing_action(self):
+    def test_renders_the_cache_clearing_action(self):
         output = show(
             [ProviderResult(name="Fixture")],
             extensions=[],
-            options=PluginOptions(show_clear_cache=True),
         )
         self.assertIn(
             "Clear local usage caches | bash=/plugin/agent-usage.15m.py "
@@ -134,7 +126,6 @@ class MenuActionTest(unittest.TestCase):
         output = show(
             [ProviderResult(name="Fixture")],
             extensions=[],
-            options=PluginOptions(show_clear_cache=True),
             plugin_path="/Application Support/SwiftBar/agent-usage.15m.py",
         )
 

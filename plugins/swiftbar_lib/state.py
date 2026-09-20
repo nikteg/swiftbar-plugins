@@ -33,13 +33,13 @@ def load(plugin: str, name: str = "state.json", default: Any = None) -> Any:
 
 
 def save(
-    plugin: str, value: Any, name: str = "state.json", private: bool = False
+    plugin: str, value: Any, name: str = "state.json", *, private: bool = False
 ) -> None:
     """Replaces the file atomically, so a crashed run cannot truncate it."""
     write_json(state_path(plugin, name), value, private=private)
 
 
-def write_json(path: Path | str, value: Any, private: bool = False) -> None:
+def write_json(path: Path | str, value: Any, *, private: bool = False) -> None:
     """Atomic JSON write. ``private`` makes the file owner-only, for secrets."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -66,15 +66,3 @@ def write_json(path: Path | str, value: Any, private: bool = False) -> None:
     except OSError:
         temporary.unlink(missing_ok=True)
         raise
-
-
-def clear(plugin: str) -> int:
-    """Deletes this plugin's state files and reports how many were removed."""
-    directory = state_dir(plugin)
-    removed = 0
-
-    for entry in directory.glob("*.json") if directory.is_dir() else []:
-        entry.unlink(missing_ok=True)
-        removed += 1
-
-    return removed

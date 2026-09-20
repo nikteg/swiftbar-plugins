@@ -10,6 +10,8 @@ import re
 import subprocess
 from dataclasses import dataclass
 
+from swiftbar_lib.state import write_json
+
 from ..config import HOME, KEYCHAIN_ACCOUNT
 from ..sources.claude import claude_desktop_session_ids, collect_claude_usage_events
 from ..types import (
@@ -135,10 +137,9 @@ def _persist_credentials(credentials: dict, profile: ClaudeProfile) -> None:
     path = os.path.join(profile.config_dir, ".credentials.json")
 
     if os.path.exists(path):
-        with open(path, "w", encoding="utf-8") as handle:
-            json.dump(credentials, handle, indent=2)
-
-        os.chmod(path, 0o600)
+        # Atomic: a crash mid-write would otherwise leave the file truncated
+        # and log this profile out.
+        write_json(path, credentials, private=True)
 
         return
 

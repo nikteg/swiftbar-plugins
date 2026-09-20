@@ -27,8 +27,6 @@ Configure
                            date, without which the monthly figure is labelled
                            Rolling 30-day.
       kimi(), deepseek()   No configuration.
-      show_clear_cache     Adds a dropdown action that deletes the usage
-                           caches, for when a transcript scan goes wrong.
 
 Credentials
     Read-only, from where each agent already stores them: the Claude Code
@@ -59,7 +57,7 @@ from agent_usage.providers import ClaudeProfile
 from agent_usage.types import ProviderExtension
 from swiftbar_lib.ansi import COLORS, RESET, level_for
 from swiftbar_lib.components import MONOSPACE, Action, Meter
-from swiftbar_lib.dates import MONTHS, MS_PER_MINUTE, WEEKDAYS
+from swiftbar_lib.dates import MONTHS, WEEKDAYS, relative
 from swiftbar_lib.meters import compact_number
 from swiftbar_lib.output import escape_strict, show
 from swiftbar_lib.ui import Item, Node, Separator, Title
@@ -75,23 +73,10 @@ def _format_reset(date: datetime | None) -> str:
     if date is None:
         return ""
 
-    milliseconds = (date - datetime.now(date.tzinfo)).total_seconds() * 1000
-
-    if milliseconds <= 0:
+    if date <= datetime.now(date.tzinfo):
         return " · reset due"
 
-    minutes = -(-int(milliseconds) // MS_PER_MINUTE)  # ceil
-    days, remainder = divmod(minutes, 1440)
-    hours, mins = divmod(remainder, 60)
-
-    if days > 0:
-        relative = f"in {days}d {hours}h"
-    elif hours > 0:
-        relative = f"in {hours}h {mins}m"
-    else:
-        relative = f"in {mins}m"
-
-    return f" · resets {_format_local_reset(date)} ({relative})"
+    return f" · resets {_format_local_reset(date)} ({relative(date)})"
 
 
 def _format_local_reset(date: datetime) -> str:

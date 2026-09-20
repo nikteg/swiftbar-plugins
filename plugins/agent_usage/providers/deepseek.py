@@ -156,7 +156,3 @@ def _collect_local_usage() -> RollingLocalUsage:
             accumulate_rolling_usage(usage, event, now)
 
     return usage
-
-
-def fetch_deepseek() -> ProviderResult:
-    return create_deepseek_extension().collect()

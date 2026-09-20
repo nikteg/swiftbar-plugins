@@ -79,12 +79,6 @@ class ProviderExtension:
 
 
 @dataclass
-class PluginOptions:
-    #: Adds a SwiftBar action that deletes only this plugin's usage caches.
-    show_clear_cache: bool = False
-
-
-@dataclass
 class LocalUsage:
     total_tokens: float = 0.0
     uncached_tokens: float = 0.0

@@ -1,6 +1,6 @@
 """Agent quota collection for the agent-usage plugin.
 
-Local to that plugin: the toolkit in ``lib/swiftbar`` is what every plugin
+Local to that plugin: the toolkit in ``swiftbar_lib`` is what every plugin
 shares, while this package is a package only because one file could not hold a
 provider registry, a pricing catalogue and a transcript cache.
 
@@ -8,7 +8,7 @@ Composition
     ``agent-usage.15m.py`` imports the factories re-exported here and passes
     them to ``run()``. Argument order is display order.
 
-        results = collect([claude(), codex(), kimi(), deepseek()])
+        results = collect(claude(), codex(), kimi(), deepseek())
 
 Rendering
     None of it lives here. The plugin file owns every component, so this
@@ -26,7 +26,7 @@ Adding a provider
             name="Example",
             account_type="api",
             auth=api_key_auth(source=EnvSecret("EXAMPLE_API_KEY")),
-            quota=custom_quota(fetch_example_balance),
+            quota=custom_quota("activity", fetch_example_balance),
         )
 
     Secrets come from ``EnvSecret``, ``JsonFileSecret``, ``ValueSecret`` or
@@ -51,7 +51,6 @@ __all__ = [
     "providers",
     "ActivityWindow",
     "ClaudeProfile",
-    "CodexOptions",
     "clear_cache",
     "collect",
     "plugin_path",

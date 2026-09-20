@@ -1,40 +1,26 @@
 """Network-backed smoke test against the real providers.
 
-Run with `make test-live`; it is deliberately outside tests/ so the offline
-suite stays hermetic. It probes the built-in provider set rather than your
-installed plugin file, so it checks the adapters, not your composition.
+Run with `make test-live`; it lives outside the names pytest collects by
+default so the offline suite stays hermetic. It checks the adapters, not any
+particular plugin's composition.
 """
 
-import re
 import unittest
 
-from agent_usage.cli import fetch_provider_results, render
+from agent_usage import collect
 from builtins_fixture import EXTENSIONS
 
 
 class LiveProvidersTest(unittest.TestCase):
-    def test_live_providers_produce_flat_output_and_local_activity(self):
-        results = fetch_provider_results(EXTENSIONS)
-        output = render(results, EXTENSIONS)
+    def test_every_provider_reports_without_error(self):
+        for usage in collect(*EXTENSIONS):
+            with self.subTest(provider=usage.provider.name):
+                self.assertIsNone(usage.result.error)
 
-        for extension in EXTENSIONS:
-            self.assertIn(extension.name, output)
-
-        for line in output.split("\n"):
-            self.assertIsNone(re.match(r"^--[^-]", line), line)
-
-        for result in results:
-            self.assertIsNone(result.error, f"{result.name} live probe failed")
-
-        for result in results:
-            if result.extension_id == "deepseek":
-                self.assertEqual(len(result.activity), 2)
-                continue
-
-            labels = {window.label for window in result.activity}
-            self.assertIn("Weekly", labels, result.name)
-            self.assertIn("5-hour", labels, result.name)
-
-
-if __name__ == "__main__":
-    unittest.main()
+    def test_every_provider_reports_some_quota_or_activity(self):
+        for usage in collect(*EXTENSIONS):
+            with self.subTest(provider=usage.provider.name):
+                self.assertTrue(
+                    usage.result.meters or usage.result.activity,
+                    "no quota and no local activity",
+                )

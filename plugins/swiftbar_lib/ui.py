@@ -67,8 +67,6 @@ class Separator:
 
 Node = Title | Item | Separator | str | None | Iterable["Node"]
 
-SEPARATOR_TEXT = "---"
-
 
 def flatten(node: Node) -> list[Title | Item | Separator]:
     """Resolves fragments, drops ``None``, and promotes bare strings to items."""

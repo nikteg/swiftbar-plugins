@@ -58,6 +58,11 @@ def format_attrs(attrs: dict[str, Any]) -> str:
             continue  # Only None means "leave this attribute out".
 
         if key == "params":
+            # A bare string is iterable, so it would expand to one param per
+            # character rather than failing.
+            if isinstance(value, (str, bytes)):
+                raise TypeError("params must be a sequence of arguments, not a string")
+
             pairs.extend(
                 f"param{index}={_value(argument)}"
                 for index, argument in enumerate(value, start=1)
@@ -91,6 +96,12 @@ def render(*node) -> str:
     def emit(entries, depth: int) -> None:
         for entry in entries:
             if isinstance(entry, Title):
+                if depth:
+                    raise ValueError(
+                        f"Title({entry.text!r}) is nested in a submenu; "
+                        "the menu bar only takes top-level titles"
+                    )
+
                 continue
 
             if isinstance(entry, Separator):

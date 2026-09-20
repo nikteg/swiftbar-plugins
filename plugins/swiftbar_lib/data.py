@@ -24,12 +24,6 @@ def string_at(value: Any, key: str) -> str | None:
     return child if isinstance(child, str) and child else None
 
 
-def list_at(value: Any, key: str) -> list:
-    child = value.get(key) if isinstance(value, dict) else None
-
-    return child if isinstance(child, list) else []
-
-
 def is_finite(value: float) -> bool:
     return value == value and value not in (float("inf"), float("-inf"))
 
@@ -58,17 +52,6 @@ def number_value(value: Any) -> float | None:
 
 def number_at(value: Any, key: str) -> float | None:
     return number_value(value.get(key)) if isinstance(value, dict) else None
-
-
-def dig(value: Any, *keys: str) -> Any:
-    """Walks nested objects, stopping at the first key that is not there."""
-    for key in keys:
-        if not isinstance(value, dict):
-            return None
-
-        value = value.get(key)
-
-    return value
 
 
 def read_json(path: str) -> dict | None:
