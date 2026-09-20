@@ -14,12 +14,22 @@ from collections.abc import Sequence
 from .cache import clear_session_caches
 from .config import CACHE_DIR
 from .registry import collect_provider_results
-from .types import ProviderExtension, ProviderResult
+from .types import ProviderExtension, Usage
 
 
-def collect(extensions: Sequence[ProviderExtension]) -> list[ProviderResult]:
-    """Queries every provider in parallel, isolating one provider's failure."""
-    return collect_provider_results(list(extensions))
+def collect(*extensions: ProviderExtension) -> list[Usage]:
+    """Queries every provider in parallel, isolating one provider's failure.
+
+    Each provider comes back paired with its result, in the order asked for,
+    so a caller never has to match the two up again.
+    """
+    ordered = list(extensions)
+    results = collect_provider_results(ordered)
+
+    return [
+        Usage(provider, result)
+        for provider, result in zip(ordered, results, strict=True)
+    ]
 
 
 def plugin_path() -> str:

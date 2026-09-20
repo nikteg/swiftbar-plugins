@@ -187,14 +187,12 @@ if __name__ == "__main__":
     now = time.time()
 
     show(
-        [
-            Title(f"HN ({len(posts)})" if posts else "HN"),
-            [Story(post, display_hours, now) for post in posts]
-            or [
-                Item("No popular posts yet"),
-                Item(f"(waiting for posts with {min_score}+ points)"),
-            ],
-            Separator(),
-            Refresh(),
-        ]
+        Title(f"HN ({len(posts)})" if posts else "HN"),
+        [Story(post, display_hours, now) for post in posts]
+        or [
+            Item("No popular posts yet"),
+            Item(f"(waiting for posts with {min_score}+ points)"),
+        ],
+        Separator(),
+        Refresh(),
     )

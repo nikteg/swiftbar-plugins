@@ -100,10 +100,8 @@ if __name__ == "__main__":
     tonight = evening(country="sweden", city="goteborg")
 
     show(
-        [
-            Title(f"🌇 {tonight.times} 🌇") if tonight.times else Title("🌇 —"),
-            Link(tonight.location, tonight.url)
-            if tonight.times
-            else Link("No golden hour found on the page", tonight.url),
-        ]
+        Title(f"🌇 {tonight.times} 🌇") if tonight.times else Title("🌇 —"),
+        Link(tonight.location, tonight.url)
+        if tonight.times
+        else Link("No golden hour found on the page", tonight.url),
     )

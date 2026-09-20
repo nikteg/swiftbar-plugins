@@ -77,11 +77,14 @@ def format_line(text: str, depth: int = 0, **attrs: Any) -> str:
     return f"{line} | {trailer}" if trailer else line
 
 
-def render(node) -> str:
-    """Renders a node tree as SwiftBar expects: titles, ``---``, then the body."""
+def render(*node) -> str:
+    """Renders a node tree as SwiftBar expects: titles, ``---``, then the body.
+
+    Variadic, so a menu reads as a list of rows rather than a list argument.
+    """
     from .ui import Separator, Title, flatten
 
-    nodes = flatten(node)
+    nodes = flatten(list(node))
     titles = [n for n in nodes if isinstance(n, Title)]
     body: list[str] = []
 
@@ -110,7 +113,7 @@ def render(node) -> str:
     return "\n".join([*head, SEPARATOR, *body]) if body else "\n".join(head)
 
 
-def show(node) -> None:
+def show(*node) -> None:
     """Writes a rendered tree to stdout, which is where SwiftBar reads it.
 
     Separate from ``render`` rather than a flag on it: a plugin only ever
@@ -118,4 +121,4 @@ def show(node) -> None:
     deciding between returning and printing would just be two functions
     sharing a name.
     """
-    print(render(node))
+    print(render(*node))

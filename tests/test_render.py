@@ -11,6 +11,7 @@ from agent_usage.types import (
     PluginOptions,
     ProviderExtension,
     ProviderResult,
+    Usage,
 )
 from builtins_fixture import EXTENSIONS
 from builtins_fixture import LOCAL_ACTIVITY_BUDGETS as BUDGETS
@@ -40,12 +41,12 @@ def show(
     """Assembles the menu the way a plugin file does, then renders it."""
     providers = EXTENSIONS if extensions is None else extensions
     options = options or PluginOptions()
-    paired = [(result, pair(result, providers)) for result in results]
+    paired = [Usage(pair(result, providers), result) for result in results]
 
     return render(
         [
-            MenuBar(" ".join(Icon(result, ext) for result, ext in paired)),
-            [[Provider(result, ext), Separator()] for result, ext in paired],
+            MenuBar(*(Icon(usage) for usage in paired)),
+            [[Provider(usage), Separator()] for usage in paired],
             Action("Clear local usage caches", plugin_path, "--clear-cache")
             if options.show_clear_cache
             else None,

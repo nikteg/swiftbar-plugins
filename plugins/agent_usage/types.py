@@ -107,3 +107,11 @@ class RollingLocalUsage:
     five_hour: LocalUsage = field(default_factory=LocalUsage)
     seven_day: LocalUsage = field(default_factory=LocalUsage)
     period: LocalUsage = field(default_factory=LocalUsage)
+
+
+@dataclass(frozen=True)
+class Usage:
+    """A provider paired with what it just reported."""
+
+    provider: ProviderExtension
+    result: ProviderResult

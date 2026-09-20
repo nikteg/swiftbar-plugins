@@ -74,17 +74,15 @@ if __name__ == "__main__":
     today = levels("Göteborg")
 
     show(
-        [
-            Title(f"🌿 Björk {today['bjork']}"),
-            Item(f"Al {today['al']}"),
-            Item(f"Alm {today['alm']}"),
-            Item(f"Ambrosia {today['ambrosia']}"),
-            Item(f"Björk {today['bjork']}"),
-            Item(f"Bok {today['bok']}"),
-            Item(f"Ek {today['ek']}"),
-            Item(f"Gråbo {today['grabo']}"),
-            Item(f"Gräs {today['gras']}"),
-            Item(f"Hassel {today['hassel']}"),
-            Item(f"Sälg/Vide {today['salg_vide']}"),
-        ]
+        Title(f"🌿 Björk {today['bjork']}"),
+        Item(f"Al {today['al']}"),
+        Item(f"Alm {today['alm']}"),
+        Item(f"Ambrosia {today['ambrosia']}"),
+        Item(f"Björk {today['bjork']}"),
+        Item(f"Bok {today['bok']}"),
+        Item(f"Ek {today['ek']}"),
+        Item(f"Gråbo {today['grabo']}"),
+        Item(f"Gräs {today['gras']}"),
+        Item(f"Hassel {today['hassel']}"),
+        Item(f"Sälg/Vide {today['salg_vide']}"),
     )

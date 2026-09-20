@@ -67,19 +67,15 @@ if __name__ == "__main__":
     level = volume(helper) if helper else None
 
     show(
+        Title(f"{speaker_icon(level)} {level}%")
+        if level is not None
+        else Title("Spotify"),
         [
-            Title(f"{speaker_icon(level)} {level}%")
-            if level is not None
-            else Title("Spotify"),
-            [
-                Preset(20, level, helper),
-                Preset(30, level, helper),
-                Preset(50, level, helper),
-                Preset(70, level, helper),
-            ]
-            if helper
-            else Item(
-                "Spotify not running" if not running else f"{HELPER} not on PATH"
-            ),
+            Preset(20, level, helper),
+            Preset(30, level, helper),
+            Preset(50, level, helper),
+            Preset(70, level, helper),
         ]
+        if helper
+        else Item("Spotify not running" if not running else f"{HELPER} not on PATH"),
     )

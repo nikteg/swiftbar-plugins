@@ -87,11 +87,9 @@ if __name__ == "__main__":
     active = next((context for context in found if context.active), None)
 
     show(
-        [
-            Title(active.short_name if short_names else active.name)
-            if active
-            else Title("⎈ —"),
-            [Switch(context, kubectl) for context in found]
-            or Item("kubectl not found on PATH" if kubectl is None else "No contexts"),
-        ]
+        Title(active.short_name if short_names else active.name)
+        if active
+        else Title("⎈ —"),
+        [Switch(context, kubectl) for context in found]
+        or Item("kubectl not found on PATH" if kubectl is None else "No contexts"),
     )

@@ -41,25 +41,17 @@ Layout
     cli.py      what a plugin file calls: collect() and the cache actions
 """
 
+from . import providers
 from .cli import clear_cache, clear_cache_requested, collect, plugin_path
 from .providers.claude import ClaudeProfile
-from .providers.claude import create_claude_extension as claude
-from .providers.codex import CodexOptions
-from .providers.codex import create_codex_extension as codex
-from .providers.deepseek import create_deepseek_extension as deepseek
-from .providers.kimi import create_kimi_extension as kimi
-from .types import ActivityWindow, ProviderExtension, ProviderResult
+from .types import ActivityWindow, Usage
 
 __all__ = [
-    "ProviderResult",
-    "ProviderExtension",
+    "Usage",
+    "providers",
     "ActivityWindow",
     "ClaudeProfile",
     "CodexOptions",
-    "claude",
-    "codex",
-    "deepseek",
-    "kimi",
     "clear_cache",
     "collect",
     "plugin_path",

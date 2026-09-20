@@ -51,10 +51,16 @@ def Meter(
     return Item(colorize(text, level_for(used)), ansi=True, font=font)
 
 
-def MenuBar(text: str, font: str = MONOSPACE, size: int = 13, **attrs: Any) -> Title:
-    """The menu bar line, with the attributes a coloured one always needs."""
+def MenuBar(
+    *parts: str,
+    separator: str = " ",
+    font: str = MONOSPACE,
+    size: int = 13,
+    **attrs: Any,
+) -> Title:
+    """The menu bar line, joined from its segments and styled for colour."""
     return Title(
-        text,
+        separator.join(parts),
         ansi=True,
         symbolize=False,
         font=font,

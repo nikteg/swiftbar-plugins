@@ -48,17 +48,15 @@ from datetime import datetime
 
 from agent_usage import (
     ActivityWindow,
-    ClaudeProfile,
-    ProviderExtension,
-    ProviderResult,
-    claude,
+    Usage,
     clear_cache,
     clear_cache_requested,
-    codex,
     collect,
-    deepseek,
     plugin_path,
+    providers,
 )
+from agent_usage.providers import ClaudeProfile
+from agent_usage.types import ProviderExtension
 from swiftbar_lib.ansi import COLORS, RESET, level_for
 from swiftbar_lib.components import Action, MenuBar, Meter
 from swiftbar_lib.dates import MONTHS, MS_PER_MINUTE, WEEKDAYS
@@ -124,7 +122,9 @@ def _budget_percent(
     return None if info is None else info.used_percent
 
 
-def _result_usage_color(result: ProviderResult, extension: ProviderExtension) -> int:
+def _usage_color(usage: Usage) -> int:
+    result, extension = usage.result, usage.provider
+
     if result.meters:
         return COLORS[level_for(max(m.used_percent for m in result.meters))]
 
@@ -146,9 +146,9 @@ def _result_usage_color(result: ProviderResult, extension: ProviderExtension) ->
     return COLORS["unknown"]
 
 
-def Icon(result: ProviderResult, extension: ProviderExtension | None) -> str:
+def Icon(usage: Usage) -> str:
     """The menu bar circle, coloured by the worst quota this provider reports."""
-    return f"\x1b[{_result_usage_color(result, extension)}m●{RESET}"
+    return f"\x1b[{_usage_color(usage)}m●{RESET}"
 
 
 def Activity(
@@ -196,7 +196,8 @@ def Activity(
     ]
 
 
-def Provider(result: ProviderResult, extension: ProviderExtension | None) -> Node:
+def Provider(usage: Usage) -> Node:
+    result, extension = usage.result, usage.provider
     heading = f"{result.name} · {result.subtitle}" if result.subtitle else result.name
     pending = list(result.activity)
     meters: list[Node] = []
@@ -218,7 +219,7 @@ def Provider(result: ProviderResult, extension: ProviderExtension | None) -> Nod
 
     return [
         Item(
-            f"{Icon(result, extension)} {escape_strict(heading)}",
+            f"{Icon(usage)} {escape_strict(heading)}",
             ansi=True,
             symbolize=False,
             size=13,
@@ -249,46 +250,41 @@ if __name__ == "__main__":
         print(clear_cache())
         raise SystemExit(0)
 
-    default = claude(
-        ClaudeProfile(
-            name="Claude Default",
-            config_dir=f"{HOME}/.claude",
-            is_default=True,
-            login_hint="run claude auth login",
-            desktop_data_dir=f"{HOME}/Library/Application Support/Claude",
-        )
-    )
-    personal = claude(
-        ClaudeProfile(
-            name="Claude Personal",
-            config_dir=f"{HOME}/.pclaude",
-            is_default=False,
-            login_hint="run CLAUDE_CONFIG_DIR=~/.pclaude claude auth login",
-            desktop_data_dir=f"{HOME}/Library/Application Support/Claude-Personal",
-        )
-    )
-    openai = codex()
-    api = deepseek()
-
-    # Collected in parallel; the results come back in the order asked for.
-    on_default, on_personal, on_openai, on_api = collect(
-        [default, personal, openai, api]
+    # Order here is the order of the circles and of the dropdown sections.
+    claude_default, claude_personal, codex, deepseek = collect(
+        providers.claude(
+            ClaudeProfile(
+                name="Claude Default",
+                config_dir=f"{HOME}/.claude",
+                is_default=True,
+                login_hint="run claude auth login",
+                desktop_data_dir=f"{HOME}/Library/Application Support/Claude",
+            )
+        ),
+        providers.claude(
+            ClaudeProfile(
+                name="Claude Personal",
+                config_dir=f"{HOME}/.pclaude",
+                is_default=False,
+                login_hint="run CLAUDE_CONFIG_DIR=~/.pclaude claude auth login",
+                desktop_data_dir=f"{HOME}/Library/Application Support/Claude-Personal",
+            )
+        ),
+        providers.codex(),
+        providers.deepseek(),
     )
 
     show(
-        [
-            MenuBar(
-                f"{Icon(on_default, default)} {Icon(on_personal, personal)}"
-                f" {Icon(on_openai, openai)} {Icon(on_api, api)}"
-            ),
-            Provider(on_default, default),
-            Separator(),
-            Provider(on_personal, personal),
-            Separator(),
-            Provider(on_openai, openai),
-            Separator(),
-            Provider(on_api, api),
-            Separator(),
-            Action("Clear local usage caches", plugin_path(), "--clear-cache"),
-        ]
+        MenuBar(
+            Icon(claude_default), Icon(claude_personal), Icon(codex), Icon(deepseek)
+        ),
+        Provider(claude_default),
+        Separator(),
+        Provider(claude_personal),
+        Separator(),
+        Provider(codex),
+        Separator(),
+        Provider(deepseek),
+        Separator(),
+        Action("Clear local usage caches", plugin_path(), "--clear-cache"),
     )

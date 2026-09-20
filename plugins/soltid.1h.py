@@ -99,10 +99,8 @@ if __name__ == "__main__":
     today = forecast(latitude=57.7095511309657, longitude=11.0, skin_type=2)
 
     show(
-        [
-            Title(f"☀️ {today.hours[0].icon}") if today.hours else Title("☀️ —"),
-            Item(today.headline) if today.headline else None,
-            [Item(hour.described) for hour in today.hours]
-            or Item("No sun data for right now"),
-        ]
+        Title(f"☀️ {today.hours[0].icon}") if today.hours else Title("☀️ —"),
+        Item(today.headline) if today.headline else None,
+        [Item(hour.described) for hour in today.hours]
+        or Item("No sun data for right now"),
     )
