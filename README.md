@@ -23,9 +23,23 @@ make install
 ```
 
 Symlinks every plugin into `~/swiftbar`, so an edit here takes effect on the
-next refresh with nothing to rebuild. `make uninstall` removes them, `make
-list` prints what would be installed. Override the destination with
+next refresh with nothing to rebuild. Override the destination with
 `make install PLUGIN_DIR="$HOME/Library/Application Support/SwiftBar/Plugins"`.
+
+Which plugins are switched on is deliberately **not** in this repo. SwiftBar
+disables a plugin by prefixing its filename with a period, so the answer lives
+in the plugin directory as either `name` or `.name` — the same thing SwiftBar's
+own Disable menu item does, and nothing git ever sees.
+
+```bash
+make list                            # on / off / absent, read from ~/swiftbar
+make disable PLUGIN=pollen.1h.py
+make enable PLUGIN=pollen.1h.py
+```
+
+`make install` never overrules that: it links only plugins it finds neither
+way, so running it after a `git pull` picks up anything new without switching
+your disabled ones back on. `make uninstall` removes both spellings.
 
 A plugin's refresh interval is the `15m` / `1h` part of its filename, so
 renaming the file changes it.
