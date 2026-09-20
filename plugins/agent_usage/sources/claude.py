@@ -8,7 +8,7 @@ from collections.abc import Iterable
 from dataclasses import asdict, dataclass
 from typing import Any
 
-from swiftbar.jsonl_cache import JsonlCache
+from swiftbar_lib.jsonl_cache import JsonlCache
 
 from ..config import CACHE_DIR, HOME
 from ..utils import (

@@ -5,7 +5,7 @@ a PEP 723 shebang, so this package never needs installing. It sits in the same
 directory as the plugin files, which is the one place Python puts on
 ``sys.path`` by itself, so a plugin just imports it.
 
-    from swiftbar import Item, Title, guard, render
+    from swiftbar_lib import Item, Title, guard, render
 
     def Example() -> Node:
         return [Title("Hello"), Item("A row", href="https://example.com")]
@@ -22,14 +22,13 @@ from .notify import notify
 from .output import escape, escape_strict, render
 from .plugin import clean_error, error_menu, guard, is_action
 from .shell import is_running, which
-from .ui import Item, Refresh, Separator, Title, Unavailable
+from .ui import Item, Refresh, Separator, Title
 
 __all__ = [
     "Item",
     "Refresh",
     "Separator",
     "Title",
-    "Unavailable",
     "RESET",
     "bar",
     "clamp_percent",

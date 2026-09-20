@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from swiftbar.shell import is_running, run, which
+from swiftbar_lib.shell import is_running, run, which
 
 PROCESS = "Spotify"
 HELPER = "spotify_volume"

@@ -2,7 +2,7 @@ import re
 import unittest
 from datetime import UTC, datetime, timedelta
 
-from agent_usage.cli import render
+from agent_usage.render import ClearCache, Icon, Provider
 from agent_usage.types import (
     ActivityExtension,
     ActivityWindow,
@@ -15,16 +15,30 @@ from agent_usage.types import (
 )
 from builtins_fixture import EXTENSIONS
 from builtins_fixture import LOCAL_ACTIVITY_BUDGETS as BUDGETS
+from swiftbar_lib.output import render
+from swiftbar_lib.ui import Separator, Title
 
 
 def show(
     results, extensions=None, options=None, plugin_path="/plugin/agent-usage.15m.py"
 ):
+    """Assembles the menu the way a plugin file does, then renders it."""
+    providers = EXTENSIONS if extensions is None else extensions
+    options = options or PluginOptions()
+
     return render(
-        results,
-        EXTENSIONS if extensions is None else extensions,
-        options,
-        plugin_path=plugin_path,
+        [
+            Title(
+                " ".join(Icon(result, providers) for result in results),
+                ansi=True,
+                symbolize=False,
+                font="Menlo",
+                size=13,
+                dropdown=False,
+            ),
+            [[Provider(result, providers), Separator()] for result in results],
+            ClearCache(plugin_path if options.show_clear_cache else None),
+        ]
     )
 
 

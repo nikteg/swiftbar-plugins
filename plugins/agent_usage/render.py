@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass
 from datetime import datetime
 
-from swiftbar.ui import Item, Node, Separator, Title
+from swiftbar_lib.ui import Item, Node
 
 from .config import BAR_WIDTH, MENU_COLORS
 from .types import ActivityWindow, ProviderExtension, ProviderResult
@@ -34,12 +33,6 @@ MONTHS = (
     "Nov",
     "Dec",
 )
-
-
-@dataclass
-class RenderOptions:
-    #: Absolute plugin path invoked by the optional cache-clearing menu action.
-    clear_cache_command: str | None = None
 
 
 def usage_level(used_percent: float) -> str:
@@ -152,9 +145,7 @@ def _result_usage_color(
     return MENU_COLORS["unknown"]
 
 
-def _result_icon(
-    result: ProviderResult, extensions: Sequence[ProviderExtension]
-) -> str:
+def Icon(result: ProviderResult, extensions: Sequence[ProviderExtension]) -> str:
     return f"\x1b[{_result_usage_color(result, extensions)}m●{ANSI_RESET}"
 
 
@@ -203,23 +194,8 @@ def Activity(
     ]
 
 
-def menu(
-    results: Sequence[ProviderResult],
-    extensions: Sequence[ProviderExtension],
-    options: RenderOptions | None = None,
-) -> Node:
-    """The whole menu for one collection pass."""
-    options = options or RenderOptions()
-    icons = " ".join(_result_icon(result, extensions) for result in results)
-
-    return [
-        Title(icons, ansi=True, symbolize=False, font="Menlo", size=13, dropdown=False),
-        [[Result(result, extensions), Separator()] for result in results],
-        ClearCache(options.clear_cache_command),
-    ]
-
-
-def ClearCache(command: str | None) -> Node:
+def ClearCache(command: str | None = None) -> Node:
+    """The cache-clearing action, or nothing when it is not enabled."""
     if command is None:
         return None
 
@@ -232,7 +208,7 @@ def ClearCache(command: str | None) -> Node:
     )
 
 
-def Result(result: ProviderResult, extensions: Sequence[ProviderExtension]) -> Node:
+def Provider(result: ProviderResult, extensions: Sequence[ProviderExtension]) -> Node:
     heading = f"{result.name} · {result.subtitle}" if result.subtitle else result.name
     extension = _extension_for(result, extensions)
     pending = list(result.activity)
@@ -255,7 +231,7 @@ def Result(result: ProviderResult, extensions: Sequence[ProviderExtension]) -> N
 
     return [
         Item(
-            f"{_result_icon(result, extensions)} {swiftbar_escape(heading)}",
+            f"{Icon(result, extensions)} {swiftbar_escape(heading)}",
             ansi=True,
             symbolize=False,
             size=13,

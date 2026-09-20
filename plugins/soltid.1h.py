@@ -29,24 +29,26 @@ Refresh
 """
 
 from sources import stralsakerhet
-from swiftbar.output import render
-from swiftbar.plugin import guard
-from swiftbar.ui import Item, Node, Title, Unavailable
-
-
-def Soltid(latitude: float, longitude: float, skin_type: int) -> Node:
-    forecast = stralsakerhet.forecast(latitude, longitude, skin_type)
-
-    if not forecast.hours:
-        return Unavailable("☀️ —", "No sun data for right now")
-
-    return [
-        Title(f"☀️ {forecast.hours[0].icon}"),
-        Item(forecast.headline),
-        [Item(hour.described) for hour in forecast.hours],
-    ]
-
+from swiftbar_lib.output import render
+from swiftbar_lib.plugin import guard
+from swiftbar_lib.ui import Item, Title
 
 if __name__ == "__main__":
     guard(name="Soltid", icon="☀️")
-    print(render(Soltid(latitude=57.7095511309657, longitude=11.0, skin_type=2)))
+
+    forecast = stralsakerhet.forecast(
+        latitude=57.7095511309657, longitude=11.0, skin_type=2
+    )
+
+    print(
+        render(
+            [
+                Title(f"☀️ {forecast.hours[0].icon}")
+                if forecast.hours
+                else Title("☀️ —"),
+                Item(forecast.headline) if forecast.headline else None,
+                [Item(hour.described) for hour in forecast.hours]
+                or Item("No sun data for right now"),
+            ]
+        )
+    )

@@ -6,7 +6,7 @@ import urllib.parse
 from dataclasses import dataclass
 from datetime import date
 
-from swiftbar.http import get_json
+from swiftbar_lib.http import get_json
 
 # Public API key embedded in the Pollenkoll Android client, not a personal
 # credential. The endpoint rejects requests without it.
@@ -42,8 +42,8 @@ class Pollen:
         return f"{NAMES.get(self.key, self.key)} {percent}%"
 
 
-def levels(city: str) -> list[Pollen] | None:
-    """Today's pollen for a city, worst first, or None when it is not reported."""
+def levels(city: str) -> list[Pollen]:
+    """Today's pollen for a city, worst first. Empty when none is reported."""
     query = urllib.parse.urlencode(
         {"city": city, "secret": SECRET, "platform": "android", "version": 3}
     )
@@ -52,7 +52,7 @@ def levels(city: str) -> list[Pollen] | None:
     match = next((c for c in cities if c.get("city") == city), None)
 
     if match is None:
-        return None
+        return []
 
     found = [
         Pollen(value["type"], value.get("level", 0))

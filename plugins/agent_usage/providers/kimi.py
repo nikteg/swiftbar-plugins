@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from swiftbar.state import write_json
+from swiftbar_lib.state import write_json
 
 from ..config import HOME
 from ..sources.pi import PiUsageEvent, collect_pi_usage_events, parse_pi_usage_event

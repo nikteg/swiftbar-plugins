@@ -8,7 +8,7 @@ Composition
     ``agent-usage.15m.py`` imports the factories re-exported here and passes
     them to ``run()``. Argument order is display order.
 
-        run(claude(), codex(), kimi(), deepseek(), show_clear_cache=True)
+        print(render(Providers(claude(), codex(), kimi(), deepseek())))
 
 Adding a provider
     A provider is a ``ProviderExtension``: an id, a display name, the auth and
@@ -36,13 +36,14 @@ Layout
     render.py   turns results into menu rows
 """
 
-from .cli import run
+from .cli import clear_cache, clear_cache_requested, collect, plugin_path
 from .providers.claude import ClaudeProfile
 from .providers.claude import create_claude_extension as claude
 from .providers.codex import CodexOptions
 from .providers.codex import create_codex_extension as codex
 from .providers.deepseek import create_deepseek_extension as deepseek
 from .providers.kimi import create_kimi_extension as kimi
+from .render import ClearCache, Icon, Provider
 
 __all__ = [
     "ClaudeProfile",
@@ -51,5 +52,11 @@ __all__ = [
     "codex",
     "deepseek",
     "kimi",
-    "run",
+    "ClearCache",
+    "Icon",
+    "Provider",
+    "clear_cache",
+    "collect",
+    "plugin_path",
+    "clear_cache_requested",
 ]

@@ -5,7 +5,7 @@ one small toolkit.
 
 ```
 plugins/              one file per plugin: the menu it describes, nothing else
-plugins/swiftbar/     the toolkit every plugin shares
+plugins/swiftbar_lib/     the toolkit every plugin shares
 plugins/sources/      where each plugin's data comes from, one module per source
 plugins/agent_usage/  local to agent-usage, which outgrew a single module
 tests/                offline test suite
@@ -231,7 +231,7 @@ the same reason.
 
 There is no virtualenv and nothing to install. The toolkit lives in the same
 directory as the plugin files, which is the one directory Python puts on
-`sys.path` by itself, so a plugin just writes `import swiftbar` with no
+`sys.path` by itself, so a plugin just writes `import swiftbar_lib` with no
 bootstrap at all. Putting it in a sibling `lib/` would need either a
 `sys.path.insert` in every plugin or a symlink back into `plugins/`; keeping
 the package next to its callers avoids both.
@@ -239,22 +239,53 @@ the package next to its callers avoids both.
 ## The toolkit
 
 ```python
-from swiftbar import Menu, run
+from sources import hackernews
+from swiftbar_lib.output import render
+from swiftbar_lib.plugin import guard
+from swiftbar_lib.ui import Item, Node, Refresh, Separator, Title
 
 
-def build(menu: Menu) -> None:
-    menu.title("Hello")
-    row = menu.item("A row", href="https://example.com")
-    row.item("Nested", refresh=True)
+def Post(post) -> Node:
+    return Item(
+        f"🔥 {post.score} - {post.title}",
+        Item("💬 View HN comments", href=post.comments_url),  # children positional
+        href=post.url,  # attributes keyword
+    )
 
 
-raise SystemExit(run(build, name="Example"))
+if __name__ == "__main__":
+    guard(name="HN", icon="⚠️")
+
+    min_score = 700
+    posts = hackernews.popular(min_score=min_score, display_hours=12)
+
+    print(
+        render(
+            [
+                Title(f"HN ({len(posts)})" if posts else "HN"),
+                [Post(post) for post in posts]  # a list is a fragment
+                or Item("No popular posts yet"),  # `or` gives the empty case
+                Separator() if posts else None,  # None renders nothing
+                Refresh(),
+            ]
+        )
+    )
 ```
+
+The bottom of every plugin is its menu, readable top to bottom: one line per
+row, conditionals inline the way JSX uses them, and the configuration sitting
+right beside the tree it configures. A named component exists only where a row
+repeats — `Post` above, `Preset` in spotifyvolume, `Context` in kubecontext.
+Everything else is spelled out.
+
+`guard` installs an excepthook, so a crash prints a readable error menu rather
+than a stack trace rendered one row per traceback line. It is a separate call
+rather than a wrapper taking a build callback, because the only reason such a
+wrapper needs a callback is to get the failure inside its own `try`.
 
 | Module | For |
 | --- | --- |
-| `sources/` | Not part of the toolkit: one module per data source, imported by plugins |
-| `ui` | The node types — `Title`, `Item`, `Separator` — and components like `Unavailable` |
+| `ui` | The node types: `Title`, `Item`, `Separator`, `Refresh` |
 | `output` | Rendering a node tree to SwiftBar's line format, and the escaping |
 | `plugin` | `guard`, the error boundary: a crash becomes an error row, not a stack trace |
 | `http` | JSON/text with timeouts, parallel fetches, graceful failures |

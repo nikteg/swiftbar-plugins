@@ -1,7 +1,7 @@
 import unittest
 
-from swiftbar.output import render
-from swiftbar.ui import Item, Separator, Title, Unavailable, flatten
+from swiftbar_lib.output import render
+from swiftbar_lib.ui import Item, Separator, Title, flatten
 
 
 class FlattenTest(unittest.TestCase):
@@ -75,14 +75,6 @@ class RenderTest(unittest.TestCase):
 
     def test_renders_titles_only_when_there_is_no_body(self):
         self.assertEqual(render(Title("just the bar")), "just the bar")
-
-
-class UnavailableTest(unittest.TestCase):
-    def test_is_a_title_and_one_plain_row(self):
-        self.assertEqual(
-            render(Unavailable("Spotify", "not running")),
-            "Spotify\n---\nnot running",
-        )
 
 
 if __name__ == "__main__":

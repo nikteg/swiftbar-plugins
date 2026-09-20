@@ -9,7 +9,7 @@ from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from typing import Any
 
-from swiftbar.jsonl_cache import JsonlCache
+from swiftbar_lib.jsonl_cache import JsonlCache
 
 from ..config import CACHE_DIR, HOME, MENU_COLORS
 from ..pricing.codex import (

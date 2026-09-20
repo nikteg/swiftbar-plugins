@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 
-from swiftbar.http import post_json
+from swiftbar_lib.http import post_json
 
 URL = "https://www.stralsakerhetsmyndigheten.se/api/v1/suntime/calculate"
 

@@ -84,14 +84,5 @@ def flatten(node: Node) -> list[Title | Item | Separator]:
     raise TypeError(f"not a menu node: {node!r}")
 
 
-def Unavailable(title: str, reason: str, **attrs: Any) -> list[Node]:
-    """The "cannot show anything right now" menu most plugins need.
-
-    A missing binary or an empty response is an ordinary state, not a failure,
-    so it gets a plain menu rather than error styling.
-    """
-    return [Title(title), Item(reason, **attrs)]
-
-
 def Refresh(label: str = "Refresh") -> Item:
     return Item(label, refresh=True)

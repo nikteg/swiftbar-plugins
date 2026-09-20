@@ -8,10 +8,10 @@ from __future__ import annotations
 
 import os
 
-from swiftbar.ansi import COLORS as MENU_COLORS
-from swiftbar.http import DEFAULT_TIMEOUT as TIMEOUT_SECONDS
-from swiftbar.meters import BAR_WIDTH
-from swiftbar.state import state_dir
+from swiftbar_lib.ansi import COLORS as MENU_COLORS
+from swiftbar_lib.http import DEFAULT_TIMEOUT as TIMEOUT_SECONDS
+from swiftbar_lib.meters import BAR_WIDTH
+from swiftbar_lib.state import state_dir
 
 HOME = os.environ.get("HOME", "")
 

@@ -45,37 +45,71 @@ Refresh
 
 import os
 
-from agent_usage import ClaudeProfile, claude, codex, deepseek, run
-from swiftbar.plugin import guard
+from agent_usage import (
+    ClaudeProfile,
+    ClearCache,
+    Icon,
+    Provider,
+    claude,
+    clear_cache,
+    clear_cache_requested,
+    codex,
+    collect,
+    deepseek,
+    plugin_path,
+)
+from swiftbar_lib.output import render
+from swiftbar_lib.plugin import guard
+from swiftbar_lib.ui import Separator, Title
 
 HOME = os.environ.get("HOME", "")
 
 if __name__ == "__main__":
     guard(name="Agent usage")
-    raise SystemExit(
-        run(
-            claude(
-                ClaudeProfile(
-                    name="Claude Default",
-                    config_dir=f"{HOME}/.claude",
-                    is_default=True,
-                    login_hint="run claude auth login",
-                    desktop_data_dir=f"{HOME}/Library/Application Support/Claude",
-                )
-            ),
-            claude(
-                ClaudeProfile(
-                    name="Claude Personal",
-                    config_dir=f"{HOME}/.pclaude",
-                    is_default=False,
-                    login_hint="run CLAUDE_CONFIG_DIR=~/.pclaude claude auth login",
-                    desktop_data_dir=(
-                        f"{HOME}/Library/Application Support/Claude-Personal"
-                    ),
-                )
-            ),
-            codex(),
-            deepseek(),
-            show_clear_cache=True,
+
+    if clear_cache_requested():
+        print(clear_cache())
+        raise SystemExit(0)
+
+    # Order here is the order of the circles in the menu bar and of the
+    # sections in the dropdown.
+    providers = [
+        claude(
+            ClaudeProfile(
+                name="Claude Default",
+                config_dir=f"{HOME}/.claude",
+                is_default=True,
+                login_hint="run claude auth login",
+                desktop_data_dir=f"{HOME}/Library/Application Support/Claude",
+            )
+        ),
+        claude(
+            ClaudeProfile(
+                name="Claude Personal",
+                config_dir=f"{HOME}/.pclaude",
+                is_default=False,
+                login_hint="run CLAUDE_CONFIG_DIR=~/.pclaude claude auth login",
+                desktop_data_dir=f"{HOME}/Library/Application Support/Claude-Personal",
+            )
+        ),
+        codex(),
+        deepseek(),
+    ]
+    results = collect(providers)
+
+    print(
+        render(
+            [
+                Title(
+                    " ".join(Icon(result, providers) for result in results),
+                    ansi=True,
+                    symbolize=False,
+                    font="Menlo",
+                    size=13,
+                    dropdown=False,
+                ),
+                [[Provider(result, providers), Separator()] for result in results],
+                ClearCache(plugin_path()),
+            ]
         )
     )

@@ -42,12 +42,13 @@ Refresh
 import time
 
 from sources import hackernews
-from swiftbar.output import render
-from swiftbar.plugin import guard
-from swiftbar.ui import Item, Node, Refresh, Separator, Title
+from swiftbar_lib.output import render
+from swiftbar_lib.plugin import guard
+from swiftbar_lib.ui import Item, Node, Refresh, Separator, Title
 
 
 def Post(post: hackernews.Post, display_hours: int, now: float) -> Node:
+    """One story, with its comments link and remaining time in a submenu."""
     return Item(
         f"🔥 {post.score} - {post.title}",
         Item("💬 View HN comments", href=post.comments_url),
@@ -57,31 +58,31 @@ def Post(post: hackernews.Post, display_hours: int, now: float) -> Node:
     )
 
 
-def Empty(min_score: int) -> Node:
-    return [
-        Item("No popular posts yet"),
-        Item(f"(waiting for posts with {min_score}+ points)"),
-    ]
-
-
-def HackerNews(
-    min_score: int, display_hours: int, cleanup_days: int, check_limit: int
-) -> Node:
-    posts = hackernews.popular(min_score, display_hours, cleanup_days, check_limit)
-    now = time.time()
-
-    return [
-        Title(f"HN ({len(posts)})" if posts else "HN"),
-        [Post(post, display_hours, now) for post in posts] or Empty(min_score),
-        Separator(),
-        Refresh(),
-    ]
-
-
 if __name__ == "__main__":
     guard(name="HN", icon="⚠️")
+
+    min_score = 700
+    display_hours = 12
+
+    posts = hackernews.popular(
+        min_score=min_score,
+        display_hours=display_hours,
+        cleanup_days=7,
+        check_limit=50,
+    )
+    now = time.time()
+
     print(
         render(
-            HackerNews(min_score=700, display_hours=12, cleanup_days=7, check_limit=50)
+            [
+                Title(f"HN ({len(posts)})" if posts else "HN"),
+                [Post(post, display_hours, now) for post in posts]
+                or [
+                    Item("No popular posts yet"),
+                    Item(f"(waiting for posts with {min_score}+ points)"),
+                ],
+                Separator(),
+                Refresh(),
+            ]
         )
     )

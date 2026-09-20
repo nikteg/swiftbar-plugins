@@ -30,12 +30,13 @@ Refresh
 """
 
 from sources import spotify
-from swiftbar.output import render
-from swiftbar.plugin import guard
-from swiftbar.ui import Item, Node, Title, Unavailable
+from swiftbar_lib.output import render
+from swiftbar_lib.plugin import guard
+from swiftbar_lib.ui import Item, Node, Title
 
 
 def Preset(preset: int, current: int, helper: str) -> Node:
+    """One volume row, checked when it matches the current level."""
     return Item(
         f"{preset}%",
         bash=helper,
@@ -46,23 +47,26 @@ def Preset(preset: int, current: int, helper: str) -> Node:
     )
 
 
-def SpotifyVolume(presets: tuple[int, ...]) -> Node:
-    if not spotify.running():
-        return Unavailable("Spotify", "Spotify not running")
-
-    helper = spotify.binary()
-
-    if helper is None:
-        return Unavailable("Spotify", "spotify_volume not found on PATH")
-
-    level = spotify.volume(helper)
-
-    return [
-        Title(f"{spotify.speaker_icon(level)} {level}%"),
-        [Preset(preset, level, helper) for preset in presets],
-    ]
-
-
 if __name__ == "__main__":
     guard(name="Spotify volume", icon="🔇")
-    print(render(SpotifyVolume(presets=(20, 30, 50, 70))))
+
+    presets = (20, 30, 50, 70)
+
+    helper = spotify.binary() if spotify.running() else None
+    level = spotify.volume(helper) if helper else None
+    missing = (
+        "Spotify not running" if not spotify.running() else "spotify_volume not on PATH"
+    )
+
+    print(
+        render(
+            [
+                Title(f"{spotify.speaker_icon(level)} {level}%")
+                if level is not None
+                else Title("Spotify"),
+                [Preset(preset, level, helper) for preset in presets]
+                if helper
+                else Item(missing),
+            ]
+        )
+    )

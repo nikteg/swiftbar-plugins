@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from swiftbar.shell import run, which
+from swiftbar_lib.shell import run, which
 
 
 @dataclass(frozen=True)

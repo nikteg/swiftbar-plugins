@@ -28,23 +28,22 @@ Refresh
 """
 
 from sources import meteogram
-from swiftbar.output import render
-from swiftbar.plugin import guard
-from swiftbar.ui import Item, Node, Title, Unavailable
-
-
-def GoldenHour(country: str, city: str) -> Node:
-    tonight = meteogram.evening(country, city)
-
-    if not tonight.times:
-        return Unavailable("🌇 —", f"No golden hour found for {city}", href=tonight.url)
-
-    return [
-        Title(f"🌇 {tonight.times} 🌇"),
-        Item(tonight.location, href=tonight.url),
-    ]
-
+from swiftbar_lib.output import render
+from swiftbar_lib.plugin import guard
+from swiftbar_lib.ui import Item, Title
 
 if __name__ == "__main__":
     guard(name="Golden hour", icon="🌇")
-    print(render(GoldenHour(country="sweden", city="goteborg")))
+
+    tonight = meteogram.evening(country="sweden", city="goteborg")
+
+    print(
+        render(
+            [
+                Title(f"🌇 {tonight.times} 🌇") if tonight.times else Title("🌇 —"),
+                Item(tonight.location, href=tonight.url)
+                if tonight.times
+                else Item("No golden hour found on the page", href=tonight.url),
+            ]
+        )
+    )

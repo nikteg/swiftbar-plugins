@@ -6,7 +6,7 @@ import time
 import unittest
 
 from agent_usage.cache import SESSION_CACHE_FILENAMES, clear_session_caches
-from swiftbar.jsonl_cache import JsonlCache
+from swiftbar_lib.jsonl_cache import JsonlCache
 
 
 class JsonlCacheTest(unittest.TestCase):

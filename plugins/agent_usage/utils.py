@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from swiftbar.data import (
+from swiftbar_lib.data import (
     is_finite,
     number_at,
     number_value,
@@ -18,7 +18,7 @@ from swiftbar.data import (
     read_json,
     string_at,
 )
-from swiftbar.dates import (
+from swiftbar_lib.dates import (
     MS_PER_DAY,
     MS_PER_HOUR,
     MS_PER_MINUTE,
@@ -28,14 +28,14 @@ from swiftbar.dates import (
     parse_date,
     to_ms,
 )
-from swiftbar.http import get_json_with_headers as fetch_json
-from swiftbar.http import post_json
-from swiftbar.meters import clamp_percent, compact_number, round_half_up
+from swiftbar_lib.http import get_json_with_headers as fetch_json
+from swiftbar_lib.http import post_json
+from swiftbar_lib.meters import clamp_percent, compact_number, round_half_up
 
 # Provider-controlled text, so ESC is stripped too: a raw escape code
 # could otherwise forge colours or hide content in the menu.
-from swiftbar.output import escape_strict as swiftbar_escape
-from swiftbar.plugin import clean_error
+from swiftbar_lib.output import escape_strict as swiftbar_escape
+from swiftbar_lib.plugin import clean_error
 
 from .types import Meter
 

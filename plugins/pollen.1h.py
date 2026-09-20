@@ -30,26 +30,27 @@ Refresh
 """
 
 from sources import pollenkoll
-from swiftbar.output import render
-from swiftbar.plugin import guard
-from swiftbar.ui import Item, Node, Title, Unavailable
-
-
-def Pollen(city: str, highlight: tuple[str, ...]) -> Node:
-    levels = pollenkoll.levels(city)
-
-    if levels is None:
-        return Unavailable(f"🌿 {city} unavailable", f"No pollen data for {city} today")
-
-    # Fall back to the worst pollen of the day when none are highlighted.
-    shown = [pollen for pollen in levels if pollen.key in highlight] or levels[:1]
-
-    return [
-        [Title(f"🌿 {pollen.label}") for pollen in shown],
-        [Item(pollen.label) for pollen in levels],
-    ]
-
+from swiftbar_lib.output import render
+from swiftbar_lib.plugin import guard
+from swiftbar_lib.ui import Item, Title
 
 if __name__ == "__main__":
     guard(name="Pollen", icon="🌿")
-    print(render(Pollen(city="Göteborg", highlight=("bjork",))))
+
+    city = "Göteborg"
+    highlight = ("bjork",)
+
+    levels = pollenkoll.levels(city)
+    # Fall back to the worst pollen of the day when none are highlighted.
+    featured = [pollen for pollen in levels if pollen.key in highlight] or levels[:1]
+
+    print(
+        render(
+            [
+                [Title(f"🌿 {pollen.label}") for pollen in featured]
+                or Title(f"🌿 {city} unavailable"),
+                [Item(pollen.label) for pollen in levels]
+                or Item(f"No pollen data for {city} today"),
+            ]
+        )
+    )

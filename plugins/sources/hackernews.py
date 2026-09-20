@@ -5,9 +5,9 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass
 
-from swiftbar import state
-from swiftbar.http import gather, get_json, quiet
-from swiftbar.notify import notify
+from swiftbar_lib import state
+from swiftbar_lib.http import gather, get_json, quiet
+from swiftbar_lib.notify import notify
 
 PLUGIN = "hn"
 STATE_FILE = "posts.json"

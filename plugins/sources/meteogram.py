@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from html.parser import HTMLParser
 
-from swiftbar.http import get_text
+from swiftbar_lib.http import get_text
 
 BASE_URL = "https://meteogram.org/sun"
 EVENING_CELL_CLASS = "avond_goudenhour"

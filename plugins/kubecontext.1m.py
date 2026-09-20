@@ -29,12 +29,13 @@ Refresh
 """
 
 from sources import kubectl
-from swiftbar.output import render
-from swiftbar.plugin import guard
-from swiftbar.ui import Item, Node, Title, Unavailable
+from swiftbar_lib.output import render
+from swiftbar_lib.plugin import guard
+from swiftbar_lib.ui import Item, Node, Title
 
 
 def Context(context: kubectl.Context, binary: str) -> Node:
+    """One switchable row. Clicking it runs kubectl and refreshes the menu."""
     return Item(
         f"{'●' if context.active else '○'} {context.name}",
         refresh=True,
@@ -44,25 +45,25 @@ def Context(context: kubectl.Context, binary: str) -> Node:
     )
 
 
-def Kubecontext(short_names: bool) -> Node:
-    binary = kubectl.binary()
-
-    if binary is None:
-        return Unavailable("⎈ —", "kubectl not found on PATH")
-
-    contexts = kubectl.contexts(binary)
-    active = next((c for c in contexts if c.active), None)
-
-    return [
-        Title(
-            "⎈ no context"
-            if active is None
-            else (active.short_name if short_names else active.name)
-        ),
-        [Context(context, binary) for context in contexts],
-    ]
-
-
 if __name__ == "__main__":
     guard(name="Kubecontext", icon="⎈")
-    print(render(Kubecontext(short_names=True)))
+
+    short_names = True
+
+    binary = kubectl.binary()
+    contexts = kubectl.contexts(binary) if binary else []
+    active = next((context for context in contexts if context.active), None)
+
+    print(
+        render(
+            [
+                Title(active.short_name if short_names else active.name)
+                if active
+                else Title("⎈ —"),
+                [Context(context, binary) for context in contexts]
+                or Item(
+                    "kubectl not found on PATH" if binary is None else "No contexts"
+                ),
+            ]
+        )
+    )
