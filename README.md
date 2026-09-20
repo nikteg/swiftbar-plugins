@@ -252,7 +252,6 @@ def Post(post) -> Node:
 
 
 if __name__ == "__main__":
-    guard(name="HN", icon="⚠️")
 
     min_score = 700
     posts = hackernews.popular(min_score=min_score, display_hours=12)
@@ -276,17 +275,16 @@ right beside the tree it configures. A named component exists only where a row
 repeats — `Post` above, `Preset` in spotifyvolume, `Context` in kubecontext.
 Everything else is spelled out.
 
-`guard` installs an excepthook, so a crash prints a readable error menu rather
-than a stack trace rendered one row per traceback line. It is a separate call
-rather than a wrapper taking a build callback, because the only reason such a
-wrapper needs a callback is to get the failure inside its own `try`.
+Nothing catches plugin-level errors: a crash exits non-zero and SwiftBar
+shows the failure itself. `clean_error` is only for a failure a plugin wants
+to render as a row, such as one provider of several being unreachable.
 
 | Module | For |
 | --- | --- |
 | `ui` | The node types: `Title`, `Item`, `Separator`, `Refresh` |
 | `components` | Rows that recur: `Meter`, `Action`, `Link` |
 | `output` | Rendering a node tree to SwiftBar's line format, and the escaping |
-| `plugin` | `guard`, the error boundary: a crash becomes an error row, not a stack trace |
+| `errors` | `clean_error`, for a failure a plugin renders as a row |
 | `http` | JSON/text with timeouts, parallel fetches, graceful failures |
 | `data` | Reading untyped JSON without trusting its shape |
 | `state` | Small JSON state files, written atomically, optionally owner-only |

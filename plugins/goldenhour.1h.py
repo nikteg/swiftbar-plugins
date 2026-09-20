@@ -33,7 +33,6 @@ from html.parser import HTMLParser
 from swiftbar_lib.components import Link
 from swiftbar_lib.http import get_text
 from swiftbar_lib.output import show
-from swiftbar_lib.plugin import guard
 from swiftbar_lib.ui import Title
 
 BASE_URL = "https://meteogram.org/sun"
@@ -95,8 +94,6 @@ def evening(country: str, city: str) -> Evening:
 
 
 if __name__ == "__main__":
-    guard(name="Golden hour", icon="🌇")
-
     tonight = evening(country="sweden", city="goteborg")
 
     show(

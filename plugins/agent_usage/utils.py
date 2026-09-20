@@ -28,6 +28,7 @@ from swiftbar_lib.dates import (
     parse_date,
     to_ms,
 )
+from swiftbar_lib.errors import clean_error
 from swiftbar_lib.http import get_json_with_headers as fetch_json
 from swiftbar_lib.http import post_json
 from swiftbar_lib.meters import clamp_percent, compact_number, round_half_up
@@ -35,7 +36,6 @@ from swiftbar_lib.meters import clamp_percent, compact_number, round_half_up
 # Provider-controlled text, so ESC is stripped too: a raw escape code
 # could otherwise forge colours or hide content in the menu.
 from swiftbar_lib.output import escape_strict as swiftbar_escape
-from swiftbar_lib.plugin import clean_error
 
 from .types import Meter
 

@@ -31,7 +31,6 @@ Refresh
 
 from swiftbar_lib.components import Action
 from swiftbar_lib.output import show
-from swiftbar_lib.plugin import guard
 from swiftbar_lib.shell import is_running, run, which
 from swiftbar_lib.ui import Item, Node, Title
 
@@ -60,8 +59,6 @@ def Preset(preset: int, current: int, helper: str) -> Node:
 
 
 if __name__ == "__main__":
-    guard(name="Spotify volume", icon="🔇")
-
     running = is_running(PROCESS)
     helper = which(HELPER) if running else None
     level = volume(helper) if helper else None

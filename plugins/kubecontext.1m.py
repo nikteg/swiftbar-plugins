@@ -32,7 +32,6 @@ from dataclasses import dataclass
 
 from swiftbar_lib.components import Action
 from swiftbar_lib.output import show
-from swiftbar_lib.plugin import guard
 from swiftbar_lib.shell import run, which
 from swiftbar_lib.ui import Item, Node, Title
 
@@ -78,8 +77,6 @@ def Switch(context: Context, kubectl: str) -> Node:
 
 
 if __name__ == "__main__":
-    guard(name="Kubecontext", icon="⎈")
-
     short_names = True
 
     kubectl = which("kubectl")

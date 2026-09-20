@@ -35,7 +35,6 @@ from datetime import date
 
 from swiftbar_lib.http import get_json
 from swiftbar_lib.output import show
-from swiftbar_lib.plugin import guard
 from swiftbar_lib.ui import Item, Title
 
 # Public API key embedded in the Pollenkoll Android client, not a personal
@@ -69,8 +68,6 @@ def levels(city: str) -> dict[str, str]:
 
 
 if __name__ == "__main__":
-    guard(name="Pollen", icon="🌿")
-
     today = levels("Göteborg")
 
     show(

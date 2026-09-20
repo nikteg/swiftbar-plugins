@@ -33,7 +33,6 @@ from datetime import datetime
 
 from swiftbar_lib.http import post_json
 from swiftbar_lib.output import show
-from swiftbar_lib.plugin import guard
 from swiftbar_lib.ui import Item, Title
 
 URL = "https://www.stralsakerhetsmyndigheten.se/api/v1/suntime/calculate"
@@ -94,8 +93,6 @@ def forecast(latitude: float, longitude: float, skin_type: int) -> Forecast:
 
 
 if __name__ == "__main__":
-    guard(name="Soltid", icon="☀️")
-
     today = forecast(latitude=57.7095511309657, longitude=11.0, skin_type=2)
 
     show(

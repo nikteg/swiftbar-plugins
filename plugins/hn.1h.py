@@ -46,7 +46,6 @@ from swiftbar_lib import state
 from swiftbar_lib.http import gather, get_json, quiet
 from swiftbar_lib.notify import notify
 from swiftbar_lib.output import show
-from swiftbar_lib.plugin import guard
 from swiftbar_lib.ui import Item, Node, Refresh, Separator, Title
 
 PLUGIN = "hn"
@@ -176,8 +175,6 @@ def Story(post: Post, display_hours: int, now: float) -> Node:
 
 
 if __name__ == "__main__":
-    guard(name="HN", icon="⚠️")
-
     min_score = 700
     display_hours = 12
 

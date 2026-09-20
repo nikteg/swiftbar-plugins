@@ -62,7 +62,6 @@ from swiftbar_lib.components import MONOSPACE, Action, Meter
 from swiftbar_lib.dates import MONTHS, MS_PER_MINUTE, WEEKDAYS
 from swiftbar_lib.meters import compact_number
 from swiftbar_lib.output import escape_strict, show
-from swiftbar_lib.plugin import guard
 from swiftbar_lib.ui import Item, Node, Separator, Title
 
 HOME = os.environ.get("HOME", "")
@@ -256,8 +255,6 @@ def Detail(line) -> Item:
 
 
 if __name__ == "__main__":
-    guard(name="Agent usage")
-
     if clear_cache_requested():
         print(clear_cache())
         raise SystemExit(0)
