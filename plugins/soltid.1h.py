@@ -31,7 +31,8 @@ Refresh
 from datetime import datetime
 
 from swiftbar.http import post_json
-from swiftbar.plugin import run as run_plugin
+from swiftbar.output import render
+from swiftbar.plugin import guard
 from swiftbar.ui import Item, Node, Title, Unavailable
 
 URL = "https://www.stralsakerhetsmyndigheten.se/api/v1/suntime/calculate"
@@ -52,37 +53,31 @@ def format_suntime(
     return " ".join(part for part in (suntime, suffix) if part)
 
 
-def run(
-    latitude: float = 57.7095511309657,
-    longitude: float = 11.0,
-    skin_type: int = 2,
-) -> int:
-    def build() -> Node:
-        now = datetime.now()
-        body = post_json(
-            URL,
-            {
-                "skintypeId": str(skin_type),
-                "latitude": latitude,
-                "longitude": longitude,
-                "dateStr": now.strftime("%Y-%m-%d"),
-                "hour": str(now.hour),
-            },
-        )
-        result = body.get("result", {})
-        results = result.get("safeTimeResults") or []
+def Soltid(latitude: float, longitude: float, skin_type: int) -> Node:
+    now = datetime.now()
+    body = post_json(
+        URL,
+        {
+            "skintypeId": str(skin_type),
+            "latitude": latitude,
+            "longitude": longitude,
+            "dateStr": now.strftime("%Y-%m-%d"),
+            "hour": str(now.hour),
+        },
+    )
+    result = body.get("result", {})
+    results = result.get("safeTimeResults") or []
 
-        if not results:
-            return Unavailable("☀️ —", "No sun data for right now")
+    if not results:
+        return Unavailable("☀️ —", "No sun data for right now")
 
-        return [
-            Title(f"☀️ {format_suntime(results[0], icon=True)}"),
-            Item(result.get("resultDescription", "").split(" den ")[0]),
-            [Item(format_suntime(entry, description=True)) for entry in results],
-        ]
-
-    return run_plugin(build, name="Soltid", icon="☀️")
+    return [
+        Title(f"☀️ {format_suntime(results[0], icon=True)}"),
+        Item(result.get("resultDescription", "").split(" den ")[0]),
+        [Item(format_suntime(entry, description=True)) for entry in results],
+    ]
 
 
 if __name__ == "__main__":
-    raise SystemExit(run(latitude=57.7095511309657, longitude=11.0, skin_type=2))
+    guard(name="Soltid", icon="☀️")
+    print(render(Soltid(latitude=57.7095511309657, longitude=11.0, skin_type=2)))

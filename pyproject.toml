@@ -11,11 +11,11 @@ dev = ["pytest>=8", "ruff>=0.6"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["lib", "plugins", "."]
+pythonpath = ["plugins", "."]
 
 [tool.ruff]
 line-length = 88
-src = ["lib", "plugins", "tests"]
+src = ["plugins", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]

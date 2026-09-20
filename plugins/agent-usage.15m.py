@@ -46,10 +46,12 @@ Refresh
 import os
 
 from agent_usage import ClaudeProfile, claude, codex, deepseek, run
+from swiftbar.plugin import guard
 
 HOME = os.environ.get("HOME", "")
 
 if __name__ == "__main__":
+    guard(name="Agent usage")
     raise SystemExit(
         run(
             claude(

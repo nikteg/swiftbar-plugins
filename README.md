@@ -4,8 +4,9 @@ My [SwiftBar](https://github.com/swiftbar/SwiftBar) plugins, in Python, sharing
 one small toolkit.
 
 ```
-lib/swiftbar/   the toolkit every plugin shares
-plugins/        one file per plugin, plus agent_usage/ and a symlink to the toolkit
+plugins/        one file per plugin, beside the code they import
+plugins/swiftbar/     the toolkit every plugin shares
+plugins/agent_usage/  local to agent-usage, which outgrew a single file
 tests/          offline test suite
 ```
 
@@ -225,16 +226,12 @@ shipped — 3.9 on current systems. Pinning here means the Python that runs a
 plugin is the one it was written against. uv is referenced by absolute path for
 the same reason.
 
-There is no virtualenv and nothing to install. `plugins/swiftbar` is a symlink
-to `../lib/swiftbar`, so the toolkit sits in the plugin's own directory — the
-one place Python puts on `sys.path` for free — and a plugin just writes
-`import swiftbar`. Git stores it as a real symlink, so a clone gets it too.
-
-That symlink replaces a `sys.path.insert` at the top of every plugin. The other
-routes do not work here: Python adds only a script's own directory and never a
-subdirectory, and a uv path dependency resolves against the working directory,
-which SwiftBar does not control. A shared helper cannot do it either, since
-importing the helper is the problem being solved.
+There is no virtualenv and nothing to install. The toolkit lives in the same
+directory as the plugin files, which is the one directory Python puts on
+`sys.path` by itself, so a plugin just writes `import swiftbar` with no
+bootstrap at all. Putting it in a sibling `lib/` would need either a
+`sys.path.insert` in every plugin or a symlink back into `plugins/`; keeping
+the package next to its callers avoids both.
 
 ## The toolkit
 
@@ -255,7 +252,7 @@ raise SystemExit(run(build, name="Example"))
 | --- | --- |
 | `ui` | The node types — `Title`, `Item`, `Separator` — and components like `Unavailable` |
 | `output` | Rendering a node tree to SwiftBar's line format, and the escaping |
-| `plugin` | The entrypoint wrapper: a crash becomes an error row, not a stack trace |
+| `plugin` | `guard`, the error boundary: a crash becomes an error row, not a stack trace |
 | `http` | JSON/text with timeouts, parallel fetches, graceful failures |
 | `data` | Reading untyped JSON without trusting its shape |
 | `state` | Small JSON state files, written atomically, optionally owner-only |
@@ -273,9 +270,8 @@ everywhere, which none of these plugins did before.
 ## Adding a plugin
 
 Copy the shebang block from an existing plugin, write a module docstring that
-documents it, return a node tree from `build()`, and put the configuration in
-the `run(...)` call
-at the bottom so it is visible in one place. Name it `<name>.<interval>.py`
+documents it, write a component that returns a node tree, and call it under
+`if __name__ == "__main__":` so the configuration is visible in one place. Name it `<name>.<interval>.py`
 under `plugins/` and run `make install`.
 
 ## Development

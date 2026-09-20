@@ -44,7 +44,8 @@ import time
 from swiftbar import state
 from swiftbar.http import gather, get_json, quiet
 from swiftbar.notify import notify
-from swiftbar.plugin import run as run_plugin
+from swiftbar.output import render
+from swiftbar.plugin import guard
 from swiftbar.ui import Item, Node, Refresh, Separator, Title
 
 PLUGIN = "hn"
@@ -140,36 +141,35 @@ def Empty(min_score: int) -> Node:
     ]
 
 
-def run(
-    min_score: int = 700,
-    display_hours: int = 12,
-    cleanup_days: int = 7,
-    check_limit: int = 50,
-) -> int:
-    def build() -> Node:
-        posts = fresh(state.load(PLUGIN, "posts.json"), cleanup_days * SECONDS_PER_DAY)
-        added = collect(posts, min_score, check_limit)
+def HackerNews(
+    min_score: int, display_hours: int, cleanup_days: int, check_limit: int
+) -> Node:
+    posts = fresh(state.load(PLUGIN, "posts.json"), cleanup_days * SECONDS_PER_DAY)
+    added = collect(posts, min_score, check_limit)
 
-        if added:
-            announce(added)
+    if added:
+        announce(added)
 
-        state.save(PLUGIN, posts, "posts.json")
+    state.save(PLUGIN, posts, "posts.json")
 
-        visible = sorted(
-            fresh(posts, display_hours * SECONDS_PER_HOUR).values(),
-            key=lambda post: -post["score"],
-        )
-        now = time.time()
+    visible = sorted(
+        fresh(posts, display_hours * SECONDS_PER_HOUR).values(),
+        key=lambda post: -post["score"],
+    )
+    now = time.time()
 
-        return [
-            Title(f"HN ({len(visible)})" if visible else "HN"),
-            [Post(post, display_hours, now) for post in visible] or Empty(min_score),
-            Separator(),
-            Refresh(),
-        ]
-
-    return run_plugin(build, name="HN", icon="⚠️")
+    return [
+        Title(f"HN ({len(visible)})" if visible else "HN"),
+        [Post(post, display_hours, now) for post in visible] or Empty(min_score),
+        Separator(),
+        Refresh(),
+    ]
 
 
 if __name__ == "__main__":
-    raise SystemExit(run(min_score=700, display_hours=12))
+    guard(name="HN", icon="⚠️")
+    print(
+        render(
+            HackerNews(min_score=700, display_hours=12, cleanup_days=7, check_limit=50)
+        )
+    )

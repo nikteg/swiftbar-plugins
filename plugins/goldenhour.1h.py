@@ -30,7 +30,8 @@ Refresh
 from html.parser import HTMLParser
 
 from swiftbar.http import get_text
-from swiftbar.plugin import run as run_plugin
+from swiftbar.output import render
+from swiftbar.plugin import guard
 from swiftbar.ui import Item, Node, Title, Unavailable
 
 BASE_URL = "https://meteogram.org/sun"
@@ -70,24 +71,21 @@ class Scraper(HTMLParser):
             self.times += data
 
 
-def run(country: str = "sweden", city: str = "goteborg") -> int:
+def GoldenHour(country: str, city: str) -> Node:
     url = f"{BASE_URL}/{country}/{city}/"
+    scraper = Scraper("avond_goudenhour")
+    scraper.feed(get_text(url))
+    times = " ".join(scraper.times.split())
 
-    def build() -> Node:
-        scraper = Scraper("avond_goudenhour")
-        scraper.feed(get_text(url))
-        times = " ".join(scraper.times.split())
+    if not times:
+        return Unavailable("🌇 —", f"No golden hour found for {city}", href=url)
 
-        if not times:
-            return Unavailable("🌇 —", f"No golden hour found for {city}", href=url)
-
-        return [
-            Title(f"🌇 {times} 🌇"),
-            Item(scraper.description.split("-")[0].strip() or city, href=url),
-        ]
-
-    return run_plugin(build, name="Golden hour", icon="🌇")
+    return [
+        Title(f"🌇 {times} 🌇"),
+        Item(scraper.description.split("-")[0].strip() or city, href=url),
+    ]
 
 
 if __name__ == "__main__":
-    raise SystemExit(run(country="sweden", city="goteborg"))
+    guard(name="Golden hour", icon="🌇")
+    print(render(GoldenHour(country="sweden", city="goteborg")))

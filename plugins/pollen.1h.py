@@ -33,7 +33,8 @@ import urllib.parse
 from datetime import date
 
 from swiftbar.http import get_json
-from swiftbar.plugin import run as run_plugin
+from swiftbar.output import render
+from swiftbar.plugin import guard
 from swiftbar.ui import Item, Node, Title, Unavailable
 
 SECRET = "350ed0ac-3e4e-44d3-8475-4000d27de94b"
@@ -72,30 +73,22 @@ def fetch(city: str) -> list[dict]:
     return body if isinstance(body, list) else []
 
 
-def Pollen(value: dict) -> Node:
-    return Item(label(value["type"], value["level"]))
+def Pollen(city: str, highlight: tuple[str, ...]) -> Node:
+    match = next((c for c in fetch(city) if c.get("city") == city), None)
 
+    if match is None:
+        return Unavailable(f"🌿 {city} unavailable", f"No pollen data for {city} today")
 
-def run(city: str = "Göteborg", highlight: tuple[str, ...] = ("bjork",)) -> int:
-    def build() -> Node:
-        match = next((c for c in fetch(city) if c.get("city") == city), None)
+    values = sorted(match.get("values", []), key=lambda v: -v.get("level", 0))
+    shown = [v for v in values if v.get("type") in highlight] or values[:1]
 
-        if match is None:
-            return Unavailable(
-                f"🌿 {city} unavailable", f"No pollen data for {city} today"
-            )
-
-        values = sorted(match.get("values", []), key=lambda v: -v.get("level", 0))
-        shown = [v for v in values if v.get("type") in highlight] or values[:1]
-
-        return [
-            [Title(f"🌿 {label(v['type'], v['level'])}") for v in shown]
-            or Title("🌿 Pollen"),
-            [Pollen(value) for value in values],
-        ]
-
-    return run_plugin(build, name="Pollen", icon="🌿")
+    return [
+        [Title(f"🌿 {label(v['type'], v['level'])}") for v in shown]
+        or Title("🌿 Pollen"),
+        [Item(label(value["type"], value["level"])) for value in values],
+    ]
 
 
 if __name__ == "__main__":
-    raise SystemExit(run(city="Göteborg", highlight=("bjork",)))
+    guard(name="Pollen", icon="🌿")
+    print(render(Pollen(city="Göteborg", highlight=("bjork",))))

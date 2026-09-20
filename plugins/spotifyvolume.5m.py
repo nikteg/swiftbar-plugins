@@ -29,7 +29,8 @@ Refresh
     refreshes immediately, so the interval only matters for outside changes.
 """
 
-from swiftbar.plugin import run as run_plugin
+from swiftbar.output import render
+from swiftbar.plugin import guard
 from swiftbar.shell import (
     is_running,
     which,
@@ -59,26 +60,24 @@ def Preset(preset: int, current: int, binary: str) -> Node:
     )
 
 
-def run(presets: tuple[int, ...] = (20, 30, 50, 70)) -> int:
-    def build() -> Node:
-        if not is_running("Spotify"):
-            return Unavailable("Spotify", "Spotify not running")
+def SpotifyVolume(presets: tuple[int, ...]) -> Node:
+    if not is_running("Spotify"):
+        return Unavailable("Spotify", "Spotify not running")
 
-        binary = which("spotify_volume")
+    binary = which("spotify_volume")
 
-        if binary is None:
-            return Unavailable("Spotify", "spotify_volume not found on PATH")
+    if binary is None:
+        return Unavailable("Spotify", "spotify_volume not found on PATH")
 
-        # Round to the nearest ten so the label does not jitter.
-        volume = (int(run_command([binary, "get"]).strip()) + 5) // 10 * 10
+    # Round to the nearest ten so the label does not jitter.
+    volume = (int(run_command([binary, "get"]).strip()) + 5) // 10 * 10
 
-        return [
-            Title(f"{speaker_icon(volume)} {volume}%"),
-            [Preset(preset, volume, binary) for preset in presets],
-        ]
-
-    return run_plugin(build, name="Spotify volume", icon="🔇")
+    return [
+        Title(f"{speaker_icon(volume)} {volume}%"),
+        [Preset(preset, volume, binary) for preset in presets],
+    ]
 
 
 if __name__ == "__main__":
-    raise SystemExit(run(presets=(20, 30, 50, 70)))
+    guard(name="Spotify volume", icon="🔇")
+    print(render(SpotifyVolume(presets=(20, 30, 50, 70))))

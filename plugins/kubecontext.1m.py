@@ -28,7 +28,8 @@ Refresh
     Every minute, from the ``1m`` in this file's name. Rename to change it.
 """
 
-from swiftbar.plugin import run as run_plugin
+from swiftbar.output import render
+from swiftbar.plugin import guard
 from swiftbar.shell import run as run_command
 from swiftbar.shell import which
 from swiftbar.ui import Item, Node, Title, Unavailable
@@ -63,27 +64,25 @@ def Context(name: str, active: bool, kubectl: str) -> Node:
     )
 
 
-def run(short_names: bool = True) -> int:
-    def build() -> Node:
-        kubectl = which("kubectl")
+def Kubecontext(short_names: bool) -> Node:
+    kubectl = which("kubectl")
 
-        if kubectl is None:
-            return Unavailable("⎈ —", "kubectl not found on PATH")
+    if kubectl is None:
+        return Unavailable("⎈ —", "kubectl not found on PATH")
 
-        found = contexts(kubectl)
-        active = next((name for name, is_active in found if is_active), None)
+    found = contexts(kubectl)
+    active = next((name for name, is_active in found if is_active), None)
 
-        return [
-            Title(
-                "⎈ no context"
-                if active is None
-                else (active.partition("/")[0] if short_names else active)
-            ),
-            [Context(name, is_active, kubectl) for name, is_active in sorted(found)],
-        ]
-
-    return run_plugin(build, name="Kubecontext", icon="⎈")
+    return [
+        Title(
+            "⎈ no context"
+            if active is None
+            else (active.partition("/")[0] if short_names else active)
+        ),
+        [Context(name, is_active, kubectl) for name, is_active in sorted(found)],
+    ]
 
 
 if __name__ == "__main__":
-    raise SystemExit(run(short_names=True))
+    guard(name="Kubecontext", icon="⎈")
+    print(render(Kubecontext(short_names=True)))
