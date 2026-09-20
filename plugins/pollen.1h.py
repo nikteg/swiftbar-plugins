@@ -29,63 +29,24 @@ Refresh
     Hourly, from the ``1h`` in this file's name. Rename to change it.
 """
 
-import urllib.parse
-from datetime import date
-
-from swiftbar.http import get_json
+from sources import pollenkoll
 from swiftbar.output import render
 from swiftbar.plugin import guard
 from swiftbar.ui import Item, Node, Title, Unavailable
 
-SECRET = "350ed0ac-3e4e-44d3-8475-4000d27de94b"
-BASE_URL = "https://pollenkoll.se/wp-json/pollenkoll-pollencounts/history"
-
-MAX_LEVEL = 7
-
-NAMES = {
-    "al": "Al",
-    "alm": "Alm",
-    "ambrosia": "Ambrosia",
-    "bjork": "Björk",
-    "bok": "Bok",
-    "ek": "Ek",
-    "grabo": "Gråbo",
-    "gras": "Gräs",
-    "hassel": "Hassel",
-    "salg_vide": "Sälg/Vide",
-}
-
-
-def percentage(level: float) -> str:
-    return f"{round(max(0, min(MAX_LEVEL, level)) / MAX_LEVEL * 100)}%"
-
-
-def label(key: str, level: float) -> str:
-    return f"{NAMES.get(key, key)} {percentage(level)}"
-
-
-def fetch(city: str) -> list[dict]:
-    query = urllib.parse.urlencode(
-        {"city": city, "secret": SECRET, "platform": "android", "version": 3}
-    )
-    body = get_json(f"{BASE_URL}/{date.today().isoformat()}/?{query}")
-
-    return body if isinstance(body, list) else []
-
 
 def Pollen(city: str, highlight: tuple[str, ...]) -> Node:
-    match = next((c for c in fetch(city) if c.get("city") == city), None)
+    levels = pollenkoll.levels(city)
 
-    if match is None:
+    if levels is None:
         return Unavailable(f"🌿 {city} unavailable", f"No pollen data for {city} today")
 
-    values = sorted(match.get("values", []), key=lambda v: -v.get("level", 0))
-    shown = [v for v in values if v.get("type") in highlight] or values[:1]
+    # Fall back to the worst pollen of the day when none are highlighted.
+    shown = [pollen for pollen in levels if pollen.key in highlight] or levels[:1]
 
     return [
-        [Title(f"🌿 {label(v['type'], v['level'])}") for v in shown]
-        or Title("🌿 Pollen"),
-        [Item(label(value["type"], value["level"])) for value in values],
+        [Title(f"🌿 {pollen.label}") for pollen in shown],
+        [Item(pollen.label) for pollen in levels],
     ]
 
 

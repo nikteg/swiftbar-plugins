@@ -28,58 +28,38 @@ Refresh
     Every minute, from the ``1m`` in this file's name. Rename to change it.
 """
 
+from sources import kubectl
 from swiftbar.output import render
 from swiftbar.plugin import guard
-from swiftbar.shell import run as run_command
-from swiftbar.shell import which
 from swiftbar.ui import Item, Node, Title, Unavailable
 
 
-def contexts(kubectl: str) -> list[tuple[str, bool]]:
-    """Returns ``(name, active)`` pairs; kubectl marks the active one with ``*``."""
-    output = run_command([kubectl, "config", "get-contexts", "--no-headers"])
-    found = []
-
-    for line in output.splitlines():
-        columns = line.split()
-
-        if not columns:
-            continue
-
-        if columns[0] == "*":
-            found.append((columns[1], True))
-        else:
-            found.append((columns[0], False))
-
-    return found
-
-
-def Context(name: str, active: bool, kubectl: str) -> Node:
+def Context(context: kubectl.Context, binary: str) -> Node:
     return Item(
-        f"{'●' if active else '○'} {name}",
+        f"{'●' if context.active else '○'} {context.name}",
         refresh=True,
         terminal=False,
-        bash=kubectl,
-        params=["config", "use-context", name],
+        bash=binary,
+        params=["config", "use-context", context.name],
     )
 
 
 def Kubecontext(short_names: bool) -> Node:
-    kubectl = which("kubectl")
+    binary = kubectl.binary()
 
-    if kubectl is None:
+    if binary is None:
         return Unavailable("⎈ —", "kubectl not found on PATH")
 
-    found = contexts(kubectl)
-    active = next((name for name, is_active in found if is_active), None)
+    contexts = kubectl.contexts(binary)
+    active = next((c for c in contexts if c.active), None)
 
     return [
         Title(
             "⎈ no context"
             if active is None
-            else (active.partition("/")[0] if short_names else active)
+            else (active.short_name if short_names else active.name)
         ),
-        [Context(name, is_active, kubectl) for name, is_active in sorted(found)],
+        [Context(context, binary) for context in contexts],
     ]
 
 

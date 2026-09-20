@@ -29,30 +29,16 @@ Refresh
     refreshes immediately, so the interval only matters for outside changes.
 """
 
+from sources import spotify
 from swiftbar.output import render
 from swiftbar.plugin import guard
-from swiftbar.shell import (
-    is_running,
-    which,
-)
-from swiftbar.shell import run as run_command
 from swiftbar.ui import Item, Node, Title, Unavailable
 
 
-def speaker_icon(volume: int) -> str:
-    if volume <= 23:
-        return "🔈"
-
-    if volume <= 33:
-        return "🔉"
-
-    return "🔊"
-
-
-def Preset(preset: int, current: int, binary: str) -> Node:
+def Preset(preset: int, current: int, helper: str) -> Node:
     return Item(
         f"{preset}%",
-        bash=binary,
+        bash=helper,
         params=["set", str(preset)],
         terminal=False,
         refresh=True,
@@ -61,20 +47,19 @@ def Preset(preset: int, current: int, binary: str) -> Node:
 
 
 def SpotifyVolume(presets: tuple[int, ...]) -> Node:
-    if not is_running("Spotify"):
+    if not spotify.running():
         return Unavailable("Spotify", "Spotify not running")
 
-    binary = which("spotify_volume")
+    helper = spotify.binary()
 
-    if binary is None:
+    if helper is None:
         return Unavailable("Spotify", "spotify_volume not found on PATH")
 
-    # Round to the nearest ten so the label does not jitter.
-    volume = (int(run_command([binary, "get"]).strip()) + 5) // 10 * 10
+    level = spotify.volume(helper)
 
     return [
-        Title(f"{speaker_icon(volume)} {volume}%"),
-        [Preset(preset, volume, binary) for preset in presets],
+        Title(f"{spotify.speaker_icon(level)} {level}%"),
+        [Preset(preset, level, helper) for preset in presets],
     ]
 
 

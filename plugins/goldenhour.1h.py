@@ -27,62 +27,21 @@ Refresh
     Hourly, from the ``1h`` in this file's name. Rename to change it.
 """
 
-from html.parser import HTMLParser
-
-from swiftbar.http import get_text
+from sources import meteogram
 from swiftbar.output import render
 from swiftbar.plugin import guard
 from swiftbar.ui import Item, Node, Title, Unavailable
 
-BASE_URL = "https://meteogram.org/sun"
-
-
-class Scraper(HTMLParser):
-    """Pulls one table cell and the description meta tag out of the page.
-
-    stdlib rather than a parser dependency: two values is not worth a wheel,
-    and a plugin that installs nothing cannot break on a stale one.
-    """
-
-    def __init__(self, cell_class: str) -> None:
-        super().__init__(convert_charrefs=True)
-        self._cell_class = cell_class
-        self._depth = 0
-        self.times: str = ""
-        self.description: str = ""
-
-    def handle_starttag(self, tag: str, attrs) -> None:
-        values = dict(attrs)
-
-        if tag == "meta" and values.get("name") == "description":
-            self.description = values.get("content") or ""
-
-        if tag == "td" and self._cell_class in (values.get("class") or "").split():
-            self._depth = 1
-        elif self._depth:
-            self._depth += 1
-
-    def handle_endtag(self, tag: str) -> None:
-        if self._depth:
-            self._depth -= 1
-
-    def handle_data(self, data: str) -> None:
-        if self._depth:
-            self.times += data
-
 
 def GoldenHour(country: str, city: str) -> Node:
-    url = f"{BASE_URL}/{country}/{city}/"
-    scraper = Scraper("avond_goudenhour")
-    scraper.feed(get_text(url))
-    times = " ".join(scraper.times.split())
+    tonight = meteogram.evening(country, city)
 
-    if not times:
-        return Unavailable("🌇 —", f"No golden hour found for {city}", href=url)
+    if not tonight.times:
+        return Unavailable("🌇 —", f"No golden hour found for {city}", href=tonight.url)
 
     return [
-        Title(f"🌇 {times} 🌇"),
-        Item(scraper.description.split("-")[0].strip() or city, href=url),
+        Title(f"🌇 {tonight.times} 🌇"),
+        Item(tonight.location, href=tonight.url),
     ]
 
 

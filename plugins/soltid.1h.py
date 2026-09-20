@@ -28,53 +28,22 @@ Refresh
     Hourly, from the ``1h`` in this file's name. Rename to change it.
 """
 
-from datetime import datetime
-
-from swiftbar.http import post_json
+from sources import stralsakerhet
 from swiftbar.output import render
 from swiftbar.plugin import guard
 from swiftbar.ui import Item, Node, Title, Unavailable
 
-URL = "https://www.stralsakerhetsmyndigheten.se/api/v1/suntime/calculate"
-
-
-def format_suntime(
-    result: dict, *, icon: bool = False, description: bool = False
-) -> str:
-    if result.get("restOfDay"):
-        suntime = "✅" if icon else "Resten av dagen"
-    else:
-        suntime = "{}h {}m".format(
-            result.get("safeTimeHours", 0), result.get("safeTimeMinutes", 0)
-        )
-
-    suffix = result.get("shadowDescription", "") if description else ""
-
-    return " ".join(part for part in (suntime, suffix) if part)
-
 
 def Soltid(latitude: float, longitude: float, skin_type: int) -> Node:
-    now = datetime.now()
-    body = post_json(
-        URL,
-        {
-            "skintypeId": str(skin_type),
-            "latitude": latitude,
-            "longitude": longitude,
-            "dateStr": now.strftime("%Y-%m-%d"),
-            "hour": str(now.hour),
-        },
-    )
-    result = body.get("result", {})
-    results = result.get("safeTimeResults") or []
+    forecast = stralsakerhet.forecast(latitude, longitude, skin_type)
 
-    if not results:
+    if not forecast.hours:
         return Unavailable("☀️ —", "No sun data for right now")
 
     return [
-        Title(f"☀️ {format_suntime(results[0], icon=True)}"),
-        Item(result.get("resultDescription", "").split(" den ")[0]),
-        [Item(format_suntime(entry, description=True)) for entry in results],
+        Title(f"☀️ {forecast.hours[0].icon}"),
+        Item(forecast.headline),
+        [Item(hour.described) for hour in forecast.hours],
     ]
 
 
