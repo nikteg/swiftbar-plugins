@@ -1,10 +1,12 @@
-"""Turns collected provider results into SwiftBar menu output."""
+"""Components turning collected provider results into a menu tree."""
 
 from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
+
+from swiftbar.ui import Item, Node, Separator, Title
 
 from .config import BAR_WIDTH, MENU_COLORS
 from .types import ActivityWindow, ProviderExtension, ProviderResult
@@ -94,12 +96,11 @@ def _ansi(text: str, color: int | str, prefix: str = "") -> str:
     return f"\x1b[{color}m{prefix}{swiftbar_escape(text)}{ANSI_RESET}"
 
 
-def _usage_bar_line(label: str, used_percent: float, detail: str = "") -> str:
+def UsageBar(label: str, used_percent: float, detail: str = "") -> Item:
     used = int(round_half_up(used_percent))
     title = swiftbar_escape(f"{label}: {_bar(used)} {used}% used{detail}")
-    color = MENU_COLORS[usage_level(used)]
 
-    return f"{_ansi(title, color)} | ansi=true font=Menlo"
+    return Item(_ansi(title, MENU_COLORS[usage_level(used)]), ansi=True, font="Menlo")
 
 
 def _extension_for(
@@ -157,11 +158,11 @@ def _result_icon(
     return f"\x1b[{_result_usage_color(result, extensions)}m●{ANSI_RESET}"
 
 
-def _activity_lines(
+def Activity(
     activity: ActivityWindow,
     extension: ProviderExtension | None,
     has_matching_meter: bool = False,
-) -> list[str]:
+) -> Node:
     extras = []
 
     if extension is not None and extension.activity is not None:
@@ -176,8 +177,10 @@ def _activity_lines(
             *extras,
         ]
     )
-    local_activity = "{} | ansi=true font=Menlo".format(
-        _ansi(details + " · local activity", MENU_COLORS["unknown"], "  └ ")
+    local = Item(
+        _ansi(details + " · local activity", MENU_COLORS["unknown"], "  └ "),
+        ansi=True,
+        font="Menlo",
     )
     budget = None
 
@@ -186,7 +189,7 @@ def _activity_lines(
             budget = extension.activity.budget_info(activity)
 
     if budget is None or has_matching_meter:
-        return [local_activity]
+        return local
 
     reset = (
         f" · resets on {activity.resets_on}"
@@ -195,68 +198,50 @@ def _activity_lines(
     )
 
     return [
-        _usage_bar_line(
-            activity.label,
-            budget.used_percent,
-            f" · {budget.detail}{reset}",
-        ),
-        local_activity,
+        UsageBar(activity.label, budget.used_percent, f" · {budget.detail}{reset}"),
+        local,
     ]
 
 
-def render_results(
+def menu(
     results: Sequence[ProviderResult],
     extensions: Sequence[ProviderExtension],
     options: RenderOptions | None = None,
-) -> str:
+) -> Node:
+    """The whole menu for one collection pass."""
     options = options or RenderOptions()
     icons = " ".join(_result_icon(result, extensions) for result in results)
-    output = [
-        f"{icons} | ansi=true symbolize=false font=Menlo size=13 dropdown=false",
-        "---",
+
+    return [
+        Title(icons, ansi=True, symbolize=False, font="Menlo", size=13, dropdown=False),
+        [[Result(result, extensions), Separator()] for result in results],
+        ClearCache(options.clear_cache_command),
     ]
 
-    for index, result in enumerate(results):
-        output.extend(_result_lines(result, extensions))
 
-        if index < len(results) - 1:
-            output.append("---")
+def ClearCache(command: str | None) -> Node:
+    if command is None:
+        return None
 
-    if options.clear_cache_command:
-        if results:
-            output.append("---")
-
-        output.append(
-            "Clear local usage caches"
-            f" | bash={_attribute(options.clear_cache_command)} param1=--clear-cache "
-            "terminal=false refresh=true"
-        )
-
-    return "\n".join(output)
+    return Item(
+        "Clear local usage caches",
+        bash=command,
+        params=["--clear-cache"],
+        terminal=False,
+        refresh=True,
+    )
 
 
-def _result_lines(
-    result: ProviderResult, extensions: Sequence[ProviderExtension]
-) -> list[str]:
+def Result(result: ProviderResult, extensions: Sequence[ProviderExtension]) -> Node:
     heading = f"{result.name} · {result.subtitle}" if result.subtitle else result.name
-    action = f" href={result.dashboard}" if result.dashboard else ""
-    output = [
-        f"{_result_icon(result, extensions)} {swiftbar_escape(heading)}"
-        f" | ansi=true symbolize=false size=13 font=Menlo{action}"
-    ]
-
-    if result.error:
-        output.append(
-            "{} | ansi=true".format(_ansi("⚠ " + result.error, MENU_COLORS["critical"]))
-        )
-
     extension = _extension_for(result, extensions)
     pending = list(result.activity)
+    meters: list[Node] = []
 
     for meter in result.meters:
         detail = f" · {meter.detail}" if meter.detail else ""
-        output.append(
-            _usage_bar_line(
+        meters.append(
+            UsageBar(
                 meter.label,
                 meter.used_percent,
                 detail + _format_reset(meter.resets_at),
@@ -265,25 +250,30 @@ def _result_lines(
         matching = [a for a in pending if a.label == meter.label]
 
         for activity in matching:
-            output.extend(_activity_lines(activity, extension, True))
+            meters.append(Activity(activity, extension, True))
             pending.remove(activity)
 
-    for activity in pending:
-        output.extend(_activity_lines(activity, extension))
+    return [
+        Item(
+            f"{_result_icon(result, extensions)} {swiftbar_escape(heading)}",
+            ansi=True,
+            symbolize=False,
+            size=13,
+            font="Menlo",
+            href=result.dashboard or None,
+        ),
+        Item(_ansi("⚠ " + result.error, MENU_COLORS["critical"]), ansi=True)
+        if result.error
+        else None,
+        meters,
+        [Activity(activity, extension) for activity in pending],
+        [Detail(line) for line in result.details],
+        [Item(swiftbar_escape(line)) for line in result.lines],
+    ]
 
-    for detail_line in result.details:
-        if detail_line.ansi_color is None:
-            title, ansi = swiftbar_escape(detail_line.text), ""
-        else:
-            title, ansi = _ansi(detail_line.text, detail_line.ansi_color), " ansi=true"
 
-        font = f" font={detail_line.font}" if detail_line.font else ""
-        output.append(f"{title} |{ansi}{font}")
+def Detail(line) -> Item:
+    if line.ansi_color is None:
+        return Item(swiftbar_escape(line.text), font=line.font or None)
 
-    output.extend(swiftbar_escape(line) for line in result.lines)
-
-    return output
-
-
-def _attribute(value: str) -> str:
-    return '"{}"'.format(value.replace("\\", "\\\\").replace('"', '\\"'))
+    return Item(_ansi(line.text, line.ansi_color), ansi=True, font=line.font or None)

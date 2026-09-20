@@ -29,14 +29,13 @@ Refresh
     refreshes immediately, so the interval only matters for outside changes.
 """
 
-
-from swiftbar.output import Menu
 from swiftbar.plugin import run as run_plugin
 from swiftbar.shell import (
     is_running,
     which,
 )
 from swiftbar.shell import run as run_command
+from swiftbar.ui import Item, Node, Title, Unavailable
 
 
 def speaker_icon(volume: int) -> str:
@@ -49,33 +48,34 @@ def speaker_icon(volume: int) -> str:
     return "🔊"
 
 
-def run(presets: tuple[int, ...] = (20, 30, 50, 70)) -> int:
-    def build(menu: Menu) -> None:
-        if not is_running("Spotify"):
-            menu.unavailable("Spotify", "Spotify not running")
+def Preset(preset: int, current: int, binary: str) -> Node:
+    return Item(
+        f"{preset}%",
+        bash=binary,
+        params=["set", str(preset)],
+        terminal=False,
+        refresh=True,
+        checked=preset == current,
+    )
 
-            return
+
+def run(presets: tuple[int, ...] = (20, 30, 50, 70)) -> int:
+    def build() -> Node:
+        if not is_running("Spotify"):
+            return Unavailable("Spotify", "Spotify not running")
 
         binary = which("spotify_volume")
 
         if binary is None:
-            menu.unavailable("Spotify", "spotify_volume not found on PATH")
+            return Unavailable("Spotify", "spotify_volume not found on PATH")
 
-            return
-
+        # Round to the nearest ten so the label does not jitter.
         volume = (int(run_command([binary, "get"]).strip()) + 5) // 10 * 10
-        menu.title(f"{speaker_icon(volume)} {volume}%")
-        menu.sep()
 
-        for preset in presets:
-            menu.item(
-                f"{preset}%",
-                bash=binary,
-                params=["set", str(preset)],
-                terminal=False,
-                refresh=True,
-                checked=preset == volume,
-            )
+        return [
+            Title(f"{speaker_icon(volume)} {volume}%"),
+            [Preset(preset, volume, binary) for preset in presets],
+        ]
 
     return run_plugin(build, name="Spotify volume", icon="🔇")
 

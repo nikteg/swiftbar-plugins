@@ -28,11 +28,10 @@ Refresh
     Every minute, from the ``1m`` in this file's name. Rename to change it.
 """
 
-
-from swiftbar.output import Menu
 from swiftbar.plugin import run as run_plugin
 from swiftbar.shell import run as run_command
 from swiftbar.shell import which
+from swiftbar.ui import Item, Node, Title, Unavailable
 
 
 def contexts(kubectl: str) -> list[tuple[str, bool]]:
@@ -54,33 +53,34 @@ def contexts(kubectl: str) -> list[tuple[str, bool]]:
     return found
 
 
+def Context(name: str, active: bool, kubectl: str) -> Node:
+    return Item(
+        f"{'●' if active else '○'} {name}",
+        refresh=True,
+        terminal=False,
+        bash=kubectl,
+        params=["config", "use-context", name],
+    )
+
+
 def run(short_names: bool = True) -> int:
-    def build(menu: Menu) -> None:
+    def build() -> Node:
         kubectl = which("kubectl")
 
         if kubectl is None:
-            menu.unavailable("⎈ —", "kubectl not found on PATH")
-
-            return
+            return Unavailable("⎈ —", "kubectl not found on PATH")
 
         found = contexts(kubectl)
         active = next((name for name, is_active in found if is_active), None)
 
-        if active is None:
-            menu.title("⎈ no context")
-        else:
-            menu.title(active.partition("/")[0] if short_names else active)
-
-        menu.sep()
-
-        for name, is_active in sorted(found):
-            menu.item(
-                "{} {}".format("●" if is_active else "○", name),
-                refresh=True,
-                terminal=False,
-                bash=kubectl,
-                params=["config", "use-context", name],
-            )
+        return [
+            Title(
+                "⎈ no context"
+                if active is None
+                else (active.partition("/")[0] if short_names else active)
+            ),
+            [Context(name, is_active, kubectl) for name, is_active in sorted(found)],
+        ]
 
     return run_plugin(build, name="Kubecontext", icon="⎈")
 

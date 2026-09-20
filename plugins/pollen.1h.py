@@ -33,8 +33,8 @@ import urllib.parse
 from datetime import date
 
 from swiftbar.http import get_json
-from swiftbar.output import Menu
 from swiftbar.plugin import run as run_plugin
+from swiftbar.ui import Item, Node, Title, Unavailable
 
 SECRET = "350ed0ac-3e4e-44d3-8475-4000d27de94b"
 BASE_URL = "https://pollenkoll.se/wp-json/pollenkoll-pollencounts/history"
@@ -72,30 +72,27 @@ def fetch(city: str) -> list[dict]:
     return body if isinstance(body, list) else []
 
 
+def Pollen(value: dict) -> Node:
+    return Item(label(value["type"], value["level"]))
+
+
 def run(city: str = "Göteborg", highlight: tuple[str, ...] = ("bjork",)) -> int:
-    def build(menu: Menu) -> None:
+    def build() -> Node:
         match = next((c for c in fetch(city) if c.get("city") == city), None)
 
         if match is None:
-            menu.unavailable(
+            return Unavailable(
                 f"🌿 {city} unavailable", f"No pollen data for {city} today"
             )
-
-            return
 
         values = sorted(match.get("values", []), key=lambda v: -v.get("level", 0))
         shown = [v for v in values if v.get("type") in highlight] or values[:1]
 
-        for value in shown:
-            menu.title("🌿 {}".format(label(value["type"], value["level"])))
-
-        if not shown:
-            menu.title("🌿 Pollen")
-
-        menu.sep()
-
-        for value in values:
-            menu.item(label(value["type"], value["level"]))
+        return [
+            [Title(f"🌿 {label(v['type'], v['level'])}") for v in shown]
+            or Title("🌿 Pollen"),
+            [Pollen(value) for value in values],
+        ]
 
     return run_plugin(build, name="Pollen", icon="🌿")
 

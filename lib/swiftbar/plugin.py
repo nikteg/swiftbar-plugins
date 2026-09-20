@@ -10,9 +10,11 @@ import re
 import socket
 import sys
 from collections.abc import Callable
+from typing import Any
 
 from .ansi import colorize
-from .output import Menu
+from .output import render as render_tree
+from .ui import Item, Title
 
 _COLLAPSE = re.compile(r"[|\r\n]+")
 MAX_ERROR_LENGTH = 100
@@ -29,22 +31,23 @@ def clean_error(error: BaseException) -> str:
     return (text or error.__class__.__name__)[:MAX_ERROR_LENGTH]
 
 
-def run(build: Callable[[Menu], None], *, name: str, icon: str = "⚠") -> int:
-    """Builds and prints a menu, turning a crash into a visible error row."""
-    menu = Menu()
+def run(build: Callable[[], Any], *, name: str, icon: str = "\u26a0") -> int:
+    """Renders what ``build`` returns, turning a crash into a visible row.
 
+    ``build`` takes no arguments and returns a node tree, so a plugin is a pure
+    function of its data and nothing half-drawn can survive a failure.
+    """
     try:
-        build(menu)
+        output = render_tree(build())
     except Exception as error:  # noqa: BLE001 - the menu bar is the error channel
-        menu = Menu()  # Discard partial output; a half-drawn menu misleads.
-        menu.title(f"{icon} {name}")
-        menu.sep()
-        menu.item(colorize(clean_error(error), "critical"), ansi=True)
-        print(menu.render())
+        output = render_tree(
+            [
+                Title(f"{icon} {name}"),
+                Item(colorize(clean_error(error), "critical"), ansi=True),
+            ]
+        )
 
-        return 0
-
-    menu.print()
+    print(output)
 
     return 0
 

@@ -31,8 +31,8 @@ Refresh
 from datetime import datetime
 
 from swiftbar.http import post_json
-from swiftbar.output import Menu
 from swiftbar.plugin import run as run_plugin
+from swiftbar.ui import Item, Node, Title, Unavailable
 
 URL = "https://www.stralsakerhetsmyndigheten.se/api/v1/suntime/calculate"
 
@@ -57,7 +57,7 @@ def run(
     longitude: float = 11.0,
     skin_type: int = 2,
 ) -> int:
-    def build(menu: Menu) -> None:
+    def build() -> Node:
         now = datetime.now()
         body = post_json(
             URL,
@@ -73,16 +73,13 @@ def run(
         results = result.get("safeTimeResults") or []
 
         if not results:
-            menu.unavailable("☀️ —", "No sun data for right now")
+            return Unavailable("☀️ —", "No sun data for right now")
 
-            return
-
-        menu.title(f"☀️ {format_suntime(results[0], icon=True)}")
-        menu.sep()
-        menu.item(result.get("resultDescription", "").split(" den ")[0])
-
-        for entry in results:
-            menu.item(format_suntime(entry, description=True))
+        return [
+            Title(f"☀️ {format_suntime(results[0], icon=True)}"),
+            Item(result.get("resultDescription", "").split(" den ")[0]),
+            [Item(format_suntime(entry, description=True)) for entry in results],
+        ]
 
     return run_plugin(build, name="Soltid", icon="☀️")
 

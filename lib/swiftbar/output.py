@@ -13,16 +13,24 @@ from typing import Any
 SEPARATOR = "---"
 
 #: Control characters and pipes both break the line format, so they go.
-_UNSAFE_TEXT = re.compile(r"[\x00-\x1f\x7f-\x9f|]+")
+#: ESC is spared, because a row with ansi=true carries colour codes.
+_UNSAFE_TEXT = re.compile(r"[\x00-\x1a\x1c-\x1f\x7f-\x9f|]+")
+_ALL_CONTROL_OR_PIPE = re.compile(r"[\x00-\x1f\x7f-\x9f|]+")
 
 #: Attribute values are quoted, so only the quoting characters need escaping.
 _NEEDS_QUOTING = re.compile(r"[\s\"'\\|]")
 
 
 def escape(text: str) -> str:
-    """Makes arbitrary text safe to use as a menu row's label."""
+    """Makes text safe as a row label, keeping any ANSI colour it carries."""
 
     return _UNSAFE_TEXT.sub(" ", str(text)).strip()
+
+
+def escape_strict(text: str) -> str:
+    """As ``escape``, but also strips ESC. For text from outside the plugin."""
+
+    return _ALL_CONTROL_OR_PIPE.sub(" ", str(text)).strip()
 
 
 def _value(value: Any) -> str:
@@ -46,8 +54,8 @@ def format_attrs(attrs: dict[str, Any]) -> str:
     pairs: list[str] = []
 
     for key, value in attrs.items():
-        if value is None or value is False:
-            continue  # Absent and off are the same thing to SwiftBar.
+        if value is None:
+            continue  # Only None means "leave this attribute out".
 
         if key == "params":
             pairs.extend(
@@ -69,74 +77,34 @@ def format_line(text: str, depth: int = 0, **attrs: Any) -> str:
     return f"{line} | {trailer}" if trailer else line
 
 
-class Item:
-    """A menu row. Adding to it nests a submenu underneath."""
+def render(node) -> str:
+    """Renders a node tree as SwiftBar expects: titles, ``---``, then the body."""
+    from .ui import Separator, Title, flatten
 
-    def __init__(self, text: str, depth: int, lines: list[str], **attrs: Any) -> None:
-        self._depth = depth
-        self._lines = lines
-        self._lines.append(format_line(text, depth, **attrs))
+    nodes = flatten(node)
+    titles = [n for n in nodes if isinstance(n, Title)]
+    body: list[str] = []
 
-    def item(self, text: str, **attrs: Any) -> Item:
-        return Item(text, self._depth + 1, self._lines, **attrs)
+    def emit(entries, depth: int) -> None:
+        for entry in entries:
+            if isinstance(entry, Title):
+                continue
 
-    def sep(self) -> None:
-        self._lines.append("--" * (self._depth + 1) + SEPARATOR)
+            if isinstance(entry, Separator):
+                line = "--" * depth + SEPARATOR
+                # Collapse repeats so a component can separate unconditionally.
+                if body and body[-1] != line:
+                    body.append(line)
+                continue
 
-    def lines(self, texts, **attrs: Any) -> None:
-        for text in texts:
-            self.item(text, **attrs)
+            body.append(format_line(entry.text, depth, **entry.attrs))
+            emit(flatten(entry.children), depth + 1)
 
+    emit(nodes, 0)
 
-class Menu:
-    """Collects the menu bar line(s) and the dropdown, then renders once."""
+    while body and body[-1].lstrip("-") == "":
+        body.pop()
 
-    def __init__(self) -> None:
-        self._titles: list[str] = []
-        self._lines: list[str] = []
+    head = [format_line(t.text, 0, **t.attrs) for t in titles] or ["?"]
 
-    def title(self, text: str, **attrs: Any) -> None:
-        """Adds a menu bar line. Several rotate in SwiftBar."""
-        self._titles.append(format_line(text, 0, **attrs))
-
-    def item(self, text: str, **attrs: Any) -> Item:
-        return Item(text, 0, self._lines, **attrs)
-
-    def sep(self) -> None:
-        # Collapse repeats so callers can separate sections unconditionally.
-        if self._lines and self._lines[-1] != SEPARATOR:
-            self._lines.append(SEPARATOR)
-
-    def lines(self, texts, **attrs: Any) -> None:
-        for text in texts:
-            self.item(text, **attrs)
-
-    def raw(self, line: str) -> None:
-        """Appends an already-formatted line, for output the API cannot express."""
-        self._lines.append(line)
-
-    def unavailable(self, title: str, reason: str, **attrs: Any) -> Item:
-        """The "cannot show anything right now" menu, which most plugins need.
-
-        A missing binary or an empty API response is an ordinary state, not a
-        failure, so it gets a plain menu rather than the error styling.
-        """
-        self.title(title)
-        self.sep()
-
-        return self.item(reason, **attrs)
-
-    def refresh_item(self, label: str = "Refresh") -> Item:
-        return self.item(label, refresh=True)
-
-    def render(self) -> str:
-        titles = self._titles or ["?"]
-        body = self._lines
-
-        while body and body[-1] == SEPARATOR:
-            body.pop()
-
-        return "\n".join([*titles, SEPARATOR, *body]) if body else "\n".join(titles)
-
-    def print(self) -> None:
-        print(self.render())
+    return "\n".join([*head, SEPARATOR, *body]) if body else "\n".join(head)

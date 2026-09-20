@@ -6,10 +6,12 @@ import os
 import sys
 from collections.abc import Sequence
 
+from swiftbar.output import render as render_tree
+
 from .cache import clear_session_caches
 from .config import CACHE_DIR
 from .registry import collect_provider_results
-from .render import RenderOptions, render_results
+from .render import RenderOptions, menu
 from .types import PluginOptions, ProviderExtension, ProviderResult
 
 
@@ -27,14 +29,16 @@ def render(
 ) -> str:
     options = options or PluginOptions()
 
-    return render_results(
-        results,
-        extensions,
-        RenderOptions(
-            clear_cache_command=(
-                plugin_path or _plugin_path() if options.show_clear_cache else None
-            )
-        ),
+    return render_tree(
+        menu(
+            results,
+            extensions,
+            RenderOptions(
+                clear_cache_command=(
+                    plugin_path or _plugin_path() if options.show_clear_cache else None
+                )
+            ),
+        )
     )
 
 

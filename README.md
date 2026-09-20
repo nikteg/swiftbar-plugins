@@ -61,7 +61,7 @@ display order:
 
 ```python
 run(
-    claude(),                      # ~/.claude
+    claude(),  # ~/.claude
     claude(ClaudeProfile(name="Claude Personal", config_dir=f"{HOME}/.pclaude")),
     codex(),
     deepseek(),
@@ -241,17 +241,20 @@ importing the helper is the problem being solved.
 ```python
 from swiftbar import Menu, run
 
+
 def build(menu: Menu) -> None:
     menu.title("Hello")
     row = menu.item("A row", href="https://example.com")
     row.item("Nested", refresh=True)
+
 
 raise SystemExit(run(build, name="Example"))
 ```
 
 | Module | For |
 | --- | --- |
-| `output` | Menu rows, submenus, attribute escaping, the `unavailable()` fallback menu |
+| `ui` | The node types — `Title`, `Item`, `Separator` — and components like `Unavailable` |
+| `output` | Rendering a node tree to SwiftBar's line format, and the escaping |
 | `plugin` | The entrypoint wrapper: a crash becomes an error row, not a stack trace |
 | `http` | JSON/text with timeouts, parallel fetches, graceful failures |
 | `data` | Reading untyped JSON without trusting its shape |
@@ -270,7 +273,8 @@ everywhere, which none of these plugins did before.
 ## Adding a plugin
 
 Copy the shebang block from an existing plugin, write a module docstring that
-documents it, build a `Menu`, and put the configuration in the `run(...)` call
+documents it, return a node tree from `build()`, and put the configuration in
+the `run(...)` call
 at the bottom so it is visible in one place. Name it `<name>.<interval>.py`
 under `plugins/` and run `make install`.
 

@@ -30,8 +30,8 @@ Refresh
 from html.parser import HTMLParser
 
 from swiftbar.http import get_text
-from swiftbar.output import Menu
 from swiftbar.plugin import run as run_plugin
+from swiftbar.ui import Item, Node, Title, Unavailable
 
 BASE_URL = "https://meteogram.org/sun"
 
@@ -73,19 +73,18 @@ class Scraper(HTMLParser):
 def run(country: str = "sweden", city: str = "goteborg") -> int:
     url = f"{BASE_URL}/{country}/{city}/"
 
-    def build(menu: Menu) -> None:
+    def build() -> Node:
         scraper = Scraper("avond_goudenhour")
         scraper.feed(get_text(url))
         times = " ".join(scraper.times.split())
 
         if not times:
-            menu.unavailable("🌇 —", f"No golden hour found for {city}", href=url)
+            return Unavailable("🌇 —", f"No golden hour found for {city}", href=url)
 
-            return
-
-        menu.title(f"🌇 {times} 🌇")
-        menu.sep()
-        menu.item(scraper.description.split("-")[0].strip() or city, href=url)
+        return [
+            Title(f"🌇 {times} 🌇"),
+            Item(scraper.description.split("-")[0].strip() or city, href=url),
+        ]
 
     return run_plugin(build, name="Golden hour", icon="🌇")
 

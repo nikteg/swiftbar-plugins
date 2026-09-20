@@ -44,8 +44,8 @@ import time
 from swiftbar import state
 from swiftbar.http import gather, get_json, quiet
 from swiftbar.notify import notify
-from swiftbar.output import Menu
 from swiftbar.plugin import run as run_plugin
+from swiftbar.ui import Item, Node, Refresh, Separator, Title
 
 PLUGIN = "hn"
 API_BASE = "https://hacker-news.firebaseio.com/v0"
@@ -121,13 +121,32 @@ def announce(added: list[dict]) -> None:
     notify(f"HN: {len(ranked)} new popular posts", titles)
 
 
+def Post(post: dict, display_hours: int, now: float) -> Node:
+    left = display_hours - (now - post["fetched_at"]) / SECONDS_PER_HOUR
+
+    return Item(
+        f"🔥 {post['score']} - {post['title']}",
+        Item("💬 View HN comments", href=post["hn_url"]),
+        Item(f"⏱️ {left:.0f}h left"),
+        href=post["url"],
+        length=60,
+    )
+
+
+def Empty(min_score: int) -> Node:
+    return [
+        Item("No popular posts yet"),
+        Item(f"(waiting for posts with {min_score}+ points)"),
+    ]
+
+
 def run(
     min_score: int = 700,
     display_hours: int = 12,
     cleanup_days: int = 7,
     check_limit: int = 50,
 ) -> int:
-    def build(menu: Menu) -> None:
+    def build() -> Node:
         posts = fresh(state.load(PLUGIN, "posts.json"), cleanup_days * SECONDS_PER_DAY)
         added = collect(posts, min_score, check_limit)
 
@@ -140,27 +159,14 @@ def run(
             fresh(posts, display_hours * SECONDS_PER_HOUR).values(),
             key=lambda post: -post["score"],
         )
-        menu.title(f"HN ({len(visible)})" if visible else "HN")
-        menu.sep()
+        now = time.time()
 
-        if not visible:
-            menu.item("No popular posts yet")
-            menu.item(f"(waiting for posts with {min_score}+ points)")
-        else:
-            now = time.time()
-
-            for post in visible:
-                row = menu.item(
-                    "🔥 {} - {}".format(post["score"], post["title"]),
-                    href=post["url"],
-                    length=60,
-                )
-                row.item("💬 View HN comments", href=post["hn_url"])
-                left = display_hours - (now - post["fetched_at"]) / SECONDS_PER_HOUR
-                row.item(f"⏱️ {left:.0f}h left")
-
-        menu.sep()
-        menu.refresh_item()
+        return [
+            Title(f"HN ({len(visible)})" if visible else "HN"),
+            [Post(post, display_hours, now) for post in visible] or Empty(min_score),
+            Separator(),
+            Refresh(),
+        ]
 
     return run_plugin(build, name="HN", icon="⚠️")
 

@@ -99,10 +99,20 @@ class MenuActionTest(unittest.TestCase):
             options=PluginOptions(show_clear_cache=True),
         )
         self.assertIn(
-            'Clear local usage caches | bash="/plugin/agent-usage.15m.py" '
+            "Clear local usage caches | bash=/plugin/agent-usage.15m.py "
             "param1=--clear-cache terminal=false refresh=true",
             output,
         )
+
+    def test_quotes_a_plugin_path_containing_spaces(self):
+        output = show(
+            [ProviderResult(name="Fixture")],
+            extensions=[],
+            options=PluginOptions(show_clear_cache=True),
+            plugin_path="/Application Support/SwiftBar/agent-usage.15m.py",
+        )
+
+        self.assertIn('bash="/Application Support/SwiftBar/agent-usage.15m.py"', output)
 
 
 class SanitizeTest(unittest.TestCase):
