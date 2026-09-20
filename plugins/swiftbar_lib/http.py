@@ -32,6 +32,7 @@ def _open(request: urllib.request.Request, timeout: float):
 def get_text(
     url: str,
     headers: Mapping[str, str] | None = None,
+    *,
     timeout: float = DEFAULT_TIMEOUT,
 ) -> str:
     request = urllib.request.Request(url, headers=dict(headers or {}))
@@ -43,10 +44,11 @@ def get_text(
 def get_json(
     url: str,
     headers: Mapping[str, str] | None = None,
+    *,
     timeout: float = DEFAULT_TIMEOUT,
     method: str = "GET",
 ) -> Any:
-    body, _ = get_json_with_headers(url, headers, timeout, method)
+    body, _ = get_json_with_headers(url, headers, timeout=timeout, method=method)
 
     return body
 
@@ -54,6 +56,7 @@ def get_json(
 def get_json_with_headers(
     url: str,
     headers: Mapping[str, str] | None = None,
+    *,
     timeout: float = DEFAULT_TIMEOUT,
     method: str = "GET",
 ) -> tuple[Any, Mapping[str, str]]:
@@ -68,6 +71,7 @@ def post_json(
     url: str,
     body: Any,
     headers: Mapping[str, str] | None = None,
+    *,
     timeout: float = DEFAULT_TIMEOUT,
 ) -> Any:
     """Posts JSON, or form-encoded pairs when ``body`` is a list of tuples."""

@@ -133,7 +133,7 @@ def http_json_quota(
     def collect(auth_headers: dict[str, str]) -> ProviderResult:
         try:
             body, response_headers = fetch_json(
-                url, {**dict(headers or {}), **auth_headers}, method
+                url, {**dict(headers or {}), **auth_headers}, method=method
             )
 
             return parse(body, response_headers)
