@@ -39,19 +39,13 @@ Refresh
     Hourly, from the ``1h`` in this file's name. Rename to change it.
 """
 
-import sys
 import time
-from pathlib import Path
 
-# Resolve through the symlink SwiftBar invokes, so the toolkit is found in the
-# checkout this file lives in rather than in the plugin directory.
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
-
-from swiftbar import state  # noqa: E402
-from swiftbar.http import gather, get_json, quiet  # noqa: E402
-from swiftbar.notify import notify  # noqa: E402
-from swiftbar.output import Menu  # noqa: E402
-from swiftbar.plugin import run as run_plugin  # noqa: E402
+from swiftbar import state
+from swiftbar.http import gather, get_json, quiet
+from swiftbar.notify import notify
+from swiftbar.output import Menu
+from swiftbar.plugin import run as run_plugin
 
 PLUGIN = "hn"
 API_BASE = "https://hacker-news.firebaseio.com/v0"

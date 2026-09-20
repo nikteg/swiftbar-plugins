@@ -29,20 +29,14 @@ Refresh
     refreshes immediately, so the interval only matters for outside changes.
 """
 
-import sys
-from pathlib import Path
 
-# Resolve through the symlink SwiftBar invokes, so the toolkit is found in the
-# checkout this file lives in rather than in the plugin directory.
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
-
-from swiftbar.output import Menu  # noqa: E402
-from swiftbar.plugin import run as run_plugin  # noqa: E402
+from swiftbar.output import Menu
+from swiftbar.plugin import run as run_plugin
 from swiftbar.shell import (
-    is_running,  # noqa: E402
-    which,  # noqa: E402
+    is_running,
+    which,
 )
-from swiftbar.shell import run as run_command  # noqa: E402
+from swiftbar.shell import run as run_command
 
 
 def speaker_icon(volume: int) -> str:

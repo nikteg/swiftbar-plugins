@@ -28,17 +28,11 @@ Refresh
     Every minute, from the ``1m`` in this file's name. Rename to change it.
 """
 
-import sys
-from pathlib import Path
 
-# Resolve through the symlink SwiftBar invokes, so the toolkit is found in the
-# checkout this file lives in rather than in the plugin directory.
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
-
-from swiftbar.output import Menu  # noqa: E402
-from swiftbar.plugin import run as run_plugin  # noqa: E402
-from swiftbar.shell import run as run_command  # noqa: E402
-from swiftbar.shell import which  # noqa: E402
+from swiftbar.output import Menu
+from swiftbar.plugin import run as run_plugin
+from swiftbar.shell import run as run_command
+from swiftbar.shell import which
 
 
 def contexts(kubectl: str) -> list[tuple[str, bool]]:

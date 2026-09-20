@@ -27,17 +27,11 @@ Refresh
     Hourly, from the ``1h`` in this file's name. Rename to change it.
 """
 
-import sys
 from html.parser import HTMLParser
-from pathlib import Path
 
-# Resolve through the symlink SwiftBar invokes, so the toolkit is found in the
-# checkout this file lives in rather than in the plugin directory.
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
-
-from swiftbar.http import get_text  # noqa: E402
-from swiftbar.output import Menu  # noqa: E402
-from swiftbar.plugin import run as run_plugin  # noqa: E402
+from swiftbar.http import get_text
+from swiftbar.output import Menu
+from swiftbar.plugin import run as run_plugin
 
 BASE_URL = "https://meteogram.org/sun"
 

@@ -1,8 +1,9 @@
 """A small toolkit for writing SwiftBar plugins in Python.
 
 The plugins in this repo are stdlib-only and are launched by SwiftBar through
-a PEP 723 shebang, so this package never needs installing: a plugin file puts
-``lib/`` on ``sys.path`` and imports from here.
+a PEP 723 shebang, so this package never needs installing. ``plugins/swiftbar``
+symlinks here, which puts it in each plugin's own directory — the one place
+Python adds to ``sys.path`` by itself — so a plugin just imports it.
 
     from swiftbar import Menu, run
 

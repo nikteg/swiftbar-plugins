@@ -5,7 +5,7 @@ one small toolkit.
 
 ```
 lib/swiftbar/   the toolkit every plugin shares
-plugins/        one file per plugin, plus agent_usage/ for the one that outgrew a file
+plugins/        one file per plugin, plus agent_usage/ and a symlink to the toolkit
 tests/          offline test suite
 ```
 
@@ -225,10 +225,16 @@ shipped — 3.9 on current systems. Pinning here means the Python that runs a
 plugin is the one it was written against. uv is referenced by absolute path for
 the same reason.
 
-There is no virtualenv and nothing to install. The toolkit is found by putting
-`lib/` on `sys.path`, because Python only adds a script's *own* directory, not
-subdirectories. A uv path dependency would be tidier, but uv resolves those
-against the working directory, which SwiftBar does not control.
+There is no virtualenv and nothing to install. `plugins/swiftbar` is a symlink
+to `../lib/swiftbar`, so the toolkit sits in the plugin's own directory — the
+one place Python puts on `sys.path` for free — and a plugin just writes
+`import swiftbar`. Git stores it as a real symlink, so a clone gets it too.
+
+That symlink replaces a `sys.path.insert` at the top of every plugin. The other
+routes do not work here: Python adds only a script's own directory and never a
+subdirectory, and a uv path dependency resolves against the working directory,
+which SwiftBar does not control. A shared helper cannot do it either, since
+importing the helper is the problem being solved.
 
 ## The toolkit
 

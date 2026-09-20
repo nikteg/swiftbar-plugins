@@ -29,18 +29,12 @@ Refresh
     Hourly, from the ``1h`` in this file's name. Rename to change it.
 """
 
-import sys
 import urllib.parse
 from datetime import date
-from pathlib import Path
 
-# Resolve through the symlink SwiftBar invokes, so the toolkit is found in the
-# checkout this file lives in rather than in the plugin directory.
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
-
-from swiftbar.http import get_json  # noqa: E402
-from swiftbar.output import Menu  # noqa: E402
-from swiftbar.plugin import run as run_plugin  # noqa: E402
+from swiftbar.http import get_json
+from swiftbar.output import Menu
+from swiftbar.plugin import run as run_plugin
 
 SECRET = "350ed0ac-3e4e-44d3-8475-4000d27de94b"
 BASE_URL = "https://pollenkoll.se/wp-json/pollenkoll-pollencounts/history"

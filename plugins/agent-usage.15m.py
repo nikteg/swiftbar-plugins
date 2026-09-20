@@ -44,14 +44,8 @@ Refresh
 """
 
 import os
-import sys
-from pathlib import Path
 
-# Resolve through the symlink SwiftBar invokes, so the toolkit is found in the
-# checkout this file lives in rather than in the plugin directory.
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
-
-from agent_usage import ClaudeProfile, claude, codex, deepseek, run  # noqa: E402
+from agent_usage import ClaudeProfile, claude, codex, deepseek, run
 
 HOME = os.environ.get("HOME", "")
 
