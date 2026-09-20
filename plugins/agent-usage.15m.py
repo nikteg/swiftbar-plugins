@@ -196,7 +196,7 @@ def Activity(
     ]
 
 
-def Provider(usage: Usage) -> Node:
+def ProviderUsage(usage: Usage) -> Node:
     result, extension = usage.result, usage.provider
     heading = f"{result.name} · {result.subtitle}" if result.subtitle else result.name
     pending = list(result.activity)
@@ -278,13 +278,13 @@ if __name__ == "__main__":
         MenuBar(
             Icon(claude_default), Icon(claude_personal), Icon(codex), Icon(deepseek)
         ),
-        Provider(claude_default),
+        ProviderUsage(claude_default),
         Separator(),
-        Provider(claude_personal),
+        ProviderUsage(claude_personal),
         Separator(),
-        Provider(codex),
+        ProviderUsage(codex),
         Separator(),
-        Provider(deepseek),
+        ProviderUsage(deepseek),
         Separator(),
         Action("Clear local usage caches", plugin_path(), "--clear-cache"),
     )

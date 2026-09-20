@@ -21,7 +21,7 @@ from swiftbar_lib.output import render
 from swiftbar_lib.ui import Separator
 
 plugin = load("agent-usage.15m.py")
-Icon, Provider = plugin.Icon, plugin.Provider
+Icon, ProviderUsage = plugin.Icon, plugin.ProviderUsage
 
 
 def pair(result, providers):
@@ -46,7 +46,7 @@ def show(
     return render(
         [
             MenuBar(*(Icon(usage) for usage in paired)),
-            [[Provider(usage), Separator()] for usage in paired],
+            [[ProviderUsage(usage), Separator()] for usage in paired],
             Action("Clear local usage caches", plugin_path, "--clear-cache")
             if options.show_clear_cache
             else None,
