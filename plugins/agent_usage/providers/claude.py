@@ -104,6 +104,28 @@ def _keychain_service(profile: ClaudeProfile) -> str:
     return f"Claude Code-credentials-{profile_suffix(profile)}"
 
 
+def _find_keychain_item(profile: ClaudeProfile) -> subprocess.CompletedProcess:
+    """Look the item up by account first: several Claude Code processes can
+    store items under the same service name (one wrote an ``unknown`` account
+    holding only MCP tokens), and ``security`` returns the first match."""
+    service = _keychain_service(profile)
+
+    for account in (KEYCHAIN_ACCOUNT, None):
+        command = ["/usr/bin/security", "find-generic-password"]
+
+        if account is not None:
+            command += ["-a", account]
+
+        completed = subprocess.run(
+            [*command, "-s", service, "-w"], capture_output=True, timeout=10
+        )
+
+        if completed.returncode == 0:
+            return completed
+
+    return completed
+
+
 def _credentials(profile: ClaudeProfile) -> dict | None:
     stored = read_json(os.path.join(profile.config_dir, ".credentials.json"))
 
@@ -111,17 +133,7 @@ def _credentials(profile: ClaudeProfile) -> dict | None:
         return stored
 
     try:
-        completed = subprocess.run(
-            [
-                "/usr/bin/security",
-                "find-generic-password",
-                "-s",
-                _keychain_service(profile),
-                "-w",
-            ],
-            capture_output=True,
-            timeout=10,
-        )
+        completed = _find_keychain_item(profile)
 
         if completed.returncode != 0:
             return None
