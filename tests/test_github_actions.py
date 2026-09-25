@@ -5,14 +5,21 @@ import unittest
 from datetime import UTC, datetime
 from unittest import mock
 
+from ci import github
+from ci.menu import Repo, Square, Squares, View, WorkflowRun
+from ci.runs import DEFAULT_COLORS, FailedJob, diagnose, duration, grouped, overall
 from plugin_loader import load
 from swiftbar_lib import config
+from swiftbar_lib import state as state_files
 from swiftbar_lib.output import render
-
-plugin = load("github-actions.1m.py")
 
 NOW = datetime(2026, 9, 25, 12, 0, tzinfo=UTC)
 GH = "/opt/homebrew/bin/gh"
+VIEW = View(NOW, DEFAULT_COLORS)
+
+
+def read(run):
+    return github.failed_jobs(GH, run)
 
 
 def raw(run_id, created, status="completed", conclusion="success", **extra):
@@ -38,7 +45,7 @@ def raw(run_id, created, status="completed", conclusion="success", **extra):
 
 
 def run(repo="o/r", **fields):
-    return plugin.parse_run(repo, raw(**fields))
+    return github.parse_run(repo, raw(**fields), GH)
 
 
 class ParseRunTest(unittest.TestCase):
@@ -63,7 +70,7 @@ class ParseRunTest(unittest.TestCase):
                 self.assertEqual(parsed.state, state)
 
     def test_skips_a_run_without_an_id_or_url(self):
-        self.assertIsNone(plugin.parse_run("o/r", {"name": "CI"}))
+        self.assertIsNone(github.parse_run("o/r", {"name": "CI"}, GH))
 
     def test_links_a_repo_workflow_to_its_page(self):
         parsed = run(run_id=1, created="2026-09-25T11:50:00Z")
@@ -97,7 +104,7 @@ class LatestTest(unittest.TestCase):
 
             return answer
 
-        return mock.patch.object(plugin, "gh_api", gh_api)
+        return mock.patch.object(github, "gh_api", gh_api)
 
     def test_keeps_the_newest_runs_across_repos(self):
         responses = {
@@ -116,9 +123,11 @@ class LatestTest(unittest.TestCase):
         }
 
         with self.fake_gh(responses):
-            found = plugin.latest(GH, [], discover=10, exclude=[], limit=2, actor=None)
+            found = github.latest(GH, [], discover=10, exclude=[], limit=2, actor=None)
 
-        self.assertEqual([(r.repo, r.id) for r in found.runs], [("o/a", 1), ("o/b", 3)])
+        self.assertEqual(
+            [(r.repo, r.id) for r in found.runs], [("o/a", "1"), ("o/b", "3")]
+        )
         self.assertEqual(found.errors, [])
 
     def test_skips_excluded_repos_and_still_discovers_enough(self):
@@ -130,8 +139,8 @@ class LatestTest(unittest.TestCase):
 
             return "o/a\no/skip\no/b\n" if path.startswith("user/repos") else empty
 
-        with mock.patch.object(plugin, "gh_api", gh_api):
-            plugin.latest(GH, [], discover=2, exclude=["o/skip"], limit=5, actor=None)
+        with mock.patch.object(github, "gh_api", gh_api):
+            github.latest(GH, [], discover=2, exclude=["o/skip"], limit=5, actor=None)
 
         self.assertEqual(requested[0], "user/repos?sort=pushed&per_page=3")
         self.assertEqual(
@@ -151,16 +160,16 @@ class LatestTest(unittest.TestCase):
         }
 
         with self.fake_gh(responses):
-            found = plugin.latest(
+            found = github.latest(
                 GH, ["o/a", "o/b"], discover=10, exclude=[], limit=5, actor=None
             )
 
-        self.assertEqual([r.id for r in found.runs], [1])
+        self.assertEqual([r.id for r in found.runs], ["1"])
         self.assertEqual(found.errors, ["o/b: gh: Not Found (HTTP 404)"])
 
     def test_reports_a_failed_discovery_as_the_only_error(self):
         with self.fake_gh({"user/repos": RuntimeError("not logged in")}):
-            found = plugin.latest(GH, [], discover=10, exclude=[], limit=5, actor=None)
+            found = github.latest(GH, [], discover=10, exclude=[], limit=5, actor=None)
 
         self.assertEqual((found.runs, found.errors), ([], ["not logged in"]))
 
@@ -172,7 +181,7 @@ class RenderTest(unittest.TestCase):
             run(run_id=2, created="2026-09-25T11:45:00Z", head_sha="sha1"),
             run(run_id=3, created="2026-09-25T11:40:00Z", conclusion="failure"),
         ]
-        title = render(plugin.Squares(runs)).split("\n")[0]
+        title = render(Squares(runs, DEFAULT_COLORS)).split("\n")[0]
 
         self.assertTrue(
             title.startswith("\x1b[33m■\x1b[0m\x1b[32m■\x1b[0m \x1b[31m■\x1b[0m |"),
@@ -180,7 +189,9 @@ class RenderTest(unittest.TestCase):
         )
 
     def test_draws_a_grey_square_when_there_are_no_runs(self):
-        self.assertTrue(render(plugin.Squares([])).startswith("\x1b[90m■\x1b[0m |"))
+        self.assertTrue(
+            render(Squares([], DEFAULT_COLORS)).startswith("\x1b[90m■\x1b[0m |")
+        )
 
     def test_heads_each_commit_over_its_runs(self):
         runs = [
@@ -188,7 +199,7 @@ class RenderTest(unittest.TestCase):
             run(run_id=2, created="2026-09-25T11:45:00Z", head_sha="abcdef123456"),
             run(run_id=3, created="2026-09-25T11:40:00Z"),
         ]
-        output = render(plugin.Repo("o/r", runs, {}, GH, NOW))
+        output = render(Repo("o/r", runs, VIEW))
         body = output.partition("---\n")[2]
         lines = [line.split(" | ")[0] for line in body.split("\n")]
 
@@ -213,8 +224,8 @@ class RenderTest(unittest.TestCase):
         ]
         output = render(
             [
-                plugin.Repo(repo, grouped, {}, GH, NOW)
-                for repo, grouped in plugin.grouped(runs, lambda r: r.repo).items()
+                Repo(repo, group, VIEW)
+                for repo, group in grouped(runs, lambda r: r.repo).items()
             ]
         )
         headings = [line for line in output.split("\n") if "size=13" in line]
@@ -263,11 +274,11 @@ class RenderTest(unittest.TestCase):
 
         for name, runs, state in cases:
             with self.subTest(name):
-                self.assertEqual(plugin.overall(runs), state)
+                self.assertEqual(overall(runs), state)
 
     def test_details_a_run_in_its_submenu(self):
         running = run(run_id=7, created="2026-09-25T11:57:00Z", status="in_progress")
-        output = render(plugin.WorkflowRun(running, None, GH, NOW))
+        output = render(WorkflowRun(running, VIEW))
 
         self.assertIn(
             "\x1b[90m  └\x1b[0m \x1b[33m■\x1b[0m CI · running 3m | "
@@ -307,7 +318,7 @@ class DiagnoseTest(unittest.TestCase):
 
     def test_keeps_the_output_before_the_error_without_folded_groups(self):
         self.assertEqual(
-            plugin.log_tail(LOG),
+            github.log_tail(LOG),
             [
                 "✖ 1 test failed",
                 "expected 2 to equal 3",
@@ -317,7 +328,7 @@ class DiagnoseTest(unittest.TestCase):
 
     def test_keeps_only_the_last_lines(self):
         self.assertEqual(
-            plugin.log_tail(LOG, count=1), ["Process completed with exit code 1."]
+            github.log_tail(LOG, count=1), ["Process completed with exit code 1."]
         )
 
     def test_reads_each_failed_job_once_per_attempt(self):
@@ -344,15 +355,15 @@ class DiagnoseTest(unittest.TestCase):
 
             return json.dumps(jobs) if path.endswith("/jobs") else LOG
 
-        with mock.patch.object(plugin, "gh_api", gh_api):
-            first = plugin.diagnose(GH, [failed])
-            second = plugin.diagnose(GH, [failed])
+        with mock.patch.object(github, "gh_api", gh_api):
+            first = diagnose("github-actions", [failed], read)
+            second = diagnose("github-actions", [failed], read)
 
         self.assertEqual(
             calls, ["repos/o/r/actions/runs/9/jobs", "repos/o/r/actions/jobs/2/logs"]
         )
         self.assertEqual(first, second)
-        (job,) = first[9]
+        (job,) = first["9"]
         self.assertEqual((job.name, job.step), ("test", "Run tests"))
         self.assertEqual(job.log[-1], "Process completed with exit code 1.")
 
@@ -362,20 +373,23 @@ class DiagnoseTest(unittest.TestCase):
         def gh_api(gh, path, *flags):
             raise RuntimeError("gh: Gone (HTTP 410)")
 
-        with mock.patch.object(plugin, "gh_api", gh_api):
-            self.assertEqual(plugin.diagnose(GH, [failed]), {9: "gh: Gone (HTTP 410)"})
+        with mock.patch.object(github, "gh_api", gh_api):
+            self.assertEqual(
+                diagnose("github-actions", [failed], read),
+                {"9": "gh: Gone (HTTP 410)"},
+            )
 
-        self.assertEqual(plugin.state.load("github-actions", "failures.json"), {})
+        self.assertEqual(state_files.load("github-actions", "failures.json"), {})
 
     def test_renders_the_failed_step_over_its_log(self):
         failed = run(run_id=9, created="2026-09-25T11:50:00Z", conclusion="failure")
-        job = plugin.FailedJob(
+        job = FailedJob(
             name="test",
             step="Run tests",
             url="https://github.com/o/r/actions/runs/9/job/2",
             log=["--- FAIL: TestThing", "exit code 1"],
         )
-        output = render(plugin.WorkflowRun(failed, [job], GH, NOW))
+        output = render(WorkflowRun(failed, View(NOW, DEFAULT_COLORS, {"9": [job]})))
 
         self.assertIn(
             "--\x1b[31m✗ test › Run tests\x1b[0m | ansi=true font=Menlo "
@@ -398,11 +412,9 @@ class ColorsTest(unittest.TestCase):
         self.addCleanup(path.unlink)
 
         configured = load("github-actions.1m.py")
-        running = configured.parse_run(
-            "o/r", raw(1, "2026-09-25T11:50:00Z", status="in_progress")
-        )
+        running = run(run_id=1, created="2026-09-25T11:50:00Z", status="in_progress")
 
-        self.assertEqual(configured.Square(running), "\x1b[38;5;208m■\x1b[0m")
+        self.assertEqual(Square(running, configured.COLORS), "\x1b[38;5;208m■\x1b[0m")
         self.assertEqual(configured.COLORS["failure"], "critical")
 
 
@@ -412,4 +424,4 @@ class DurationTest(unittest.TestCase):
 
         for seconds, expected in cases:
             with self.subTest(seconds=seconds):
-                self.assertEqual(plugin.duration(seconds), expected)
+                self.assertEqual(duration(seconds), expected)
