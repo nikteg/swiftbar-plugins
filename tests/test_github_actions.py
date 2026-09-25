@@ -7,7 +7,15 @@ from unittest import mock
 
 from ci import github
 from ci.menu import Repo, Square, Squares, View, WorkflowRun
-from ci.runs import DEFAULT_COLORS, FailedJob, diagnose, duration, grouped, overall
+from ci.runs import (
+    DEFAULT_COLORS,
+    FailedJob,
+    diagnose,
+    duration,
+    grouped,
+    overall,
+    whole_commits,
+)
 from plugin_loader import load
 from swiftbar_lib import config
 from swiftbar_lib import state as state_files
@@ -126,7 +134,8 @@ class LatestTest(unittest.TestCase):
             found = github.latest(GH, [], discover=10, exclude=[], limit=2, actor=None)
 
         self.assertEqual(
-            [(r.repo, r.id) for r in found.runs], [("o/a", "1"), ("o/b", "3")]
+            [(r.repo, r.id) for r in found.runs],
+            [("o/a", "1"), ("o/b", "3"), ("o/a", "2")],
         )
         self.assertEqual(found.errors, [])
 
@@ -181,16 +190,39 @@ class RenderTest(unittest.TestCase):
             run(run_id=2, created="2026-09-25T11:45:00Z", head_sha="sha1"),
             run(run_id=3, created="2026-09-25T11:40:00Z", conclusion="failure"),
         ]
-        title = render(Squares(runs, DEFAULT_COLORS)).split("\n")[0]
+        title = render(Squares(runs, DEFAULT_COLORS, 5)).split("\n")[0]
 
         self.assertTrue(
             title.startswith("\x1b[33m■\x1b[0m\x1b[32m■\x1b[0m \x1b[31m■\x1b[0m |"),
             title,
         )
 
+    def test_counts_commits_not_runs_and_never_cuts_one_short(self):
+        runs = [
+            run(run_id=1, created="2026-09-25T11:50:00Z", head_sha="a"),
+            run(run_id=2, created="2026-09-25T11:49:00Z", head_sha="a"),
+            run(run_id=3, created="2026-09-25T11:48:00Z", head_sha="b"),
+            run(run_id=4, created="2026-09-25T11:47:00Z", head_sha="b"),
+            run(run_id=5, created="2026-09-25T11:46:00Z", head_sha="c"),
+        ]
+        title = render(Squares(runs, DEFAULT_COLORS, 2)).split(" | ")[0]
+        green = "\x1b[32m■\x1b[0m"
+
+        self.assertEqual(title, f"{green}{green} {green}{green}")
+
+    def test_lists_the_rest_of_a_commit_the_limit_cuts_into(self):
+        runs = [
+            run(run_id=1, created="2026-09-25T11:50:00Z", head_sha="a"),
+            run(run_id=2, created="2026-09-25T11:49:00Z", head_sha="b"),
+            run(run_id=3, created="2026-09-25T11:48:00Z", head_sha="b"),
+            run(run_id=4, created="2026-09-25T11:47:00Z", head_sha="c"),
+        ]
+
+        self.assertEqual([r.id for r in whole_commits(runs, 2)], ["1", "2", "3"])
+
     def test_draws_a_grey_square_when_there_are_no_runs(self):
         self.assertTrue(
-            render(Squares([], DEFAULT_COLORS)).startswith("\x1b[90m■\x1b[0m |")
+            render(Squares([], DEFAULT_COLORS, 5)).startswith("\x1b[90m■\x1b[0m |")
         )
 
     def test_heads_each_commit_over_its_runs(self):

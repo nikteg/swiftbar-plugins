@@ -214,7 +214,8 @@ Refresh | refresh=true
 GitHub has no endpoint that lists runs across repos, so it takes two steps
 through `gh api`: `user/repos?sort=pushed` finds the ten repos you can access
 with the most recent pushes, then each one's `actions/runs` is fetched in
-parallel. The five newest get a square and the fifteen newest are listed. Runs
+parallel. The five newest commits get squares, one per run, and about the
+fifteen newest runs are listed; neither cuts a commit short. Runs
 are grouped by commit hash rather than by start time, which would split one
 push across a window boundary. A repo that errors (SSO not authorised, say) is
 listed with the error rather than hiding the rest.
