@@ -16,13 +16,13 @@ Shows
     running, green when it passed, red when it failed or is failing, grey
     when it was canceled or skipped. A build blocked on a manual step after
     passing so far counts as passed.
-    Dropdown: the same groups in the same order, then more under "Not in menu
-    bar": one per commit, newest first, a separator where the bar has its
-    line, each commit headed by a squircle, the worst of each pipeline's
-    latest build on it, its repo's name, short hash, branch and message; its
-    submenu has the full hash, author and the whole message. Each build's row
-    has its pipeline and build number; its submenu has the trigger and
-    duration, and links to the build and its pipeline. A failed build also
+    Dropdown: the same groups in the same order, then the rest in a "more
+    commits" submenu: one per commit, newest first, a separator where the bar
+    has its line, each commit headed by a squircle, the worst of each
+    pipeline's latest build on it, its repo's name, short hash, branch and
+    message; its submenu has the full hash, author and the whole message. Each
+    build's row has its pipeline and build number; its submenu has the trigger
+    and duration, and links to the build and its pipeline. A failed build also
     names each failed job and its exit status, shows the last lines of its log
     before the agent's error line, and offers to open the first failed job's
     full log in Terminal.

@@ -293,21 +293,23 @@ class RenderTest(unittest.TestCase):
         self.assertEqual(headings, ["a", "b", "a"])
         self.assertEqual(len(bar), len(headings))
 
-    def test_heads_the_commits_the_menu_bar_leaves_out(self):
+    def test_tucks_the_commits_the_menu_bar_leaves_out_into_a_submenu(self):
         runs = [
             run(run_id=1, created="2026-09-25T11:50:00Z", head_sha="x"),
             run(run_id=2, created="2026-09-25T11:40:00Z", head_sha="y"),
             run(run_id=3, created="2026-09-25T11:30:00Z", head_sha="z"),
         ]
         body = render(Commits(runs, VIEW, 2)).partition("---\n")[2].split("\n")
-        marker = body.index(
-            "\x1b[90mNot in menu bar\x1b[0m | ansi=true font=Menlo size=11"
-        )
+        tops = [line.split(" | ")[0] for line in body if not line.startswith("--")]
+        more = body.index("More (1) | font=Menlo")
 
-        self.assertEqual(body[marker - 1], "---")  # after the bar's last commit
-        self.assertEqual(body[marker + 1], "---")  # and a line of its own under it
-        self.assertTrue(body[marker + 2].startswith("r \x1b[90m· z · main"))
-        self.assertNotIn("Not in menu bar", render(Commits(runs, VIEW, 3)))
+        self.assertEqual(
+            [line.split(" ")[0] for line in tops],
+            ["r", "CI", "r", "CI", "More"],
+        )
+        self.assertTrue(body[more + 1].startswith("--r \x1b[90m· z · main"))
+        self.assertTrue(body[more + 2].startswith("----"))  # its own submenu
+        self.assertNotIn("More (", render(Commits(runs, VIEW, 3)))
 
     def test_separates_commits_like_the_menu_bar(self):
         runs = [
