@@ -240,7 +240,7 @@ class RenderTest(unittest.TestCase):
             run(run_id=2, created="2026-09-25T11:45:00Z", head_sha="abcdef123456"),
             run(run_id=3, created="2026-09-25T11:40:00Z"),
         ]
-        output = render(Commits(runs, VIEW))
+        output = render(Commits(runs, VIEW, 5))
 
         self.assertEqual(
             rows(output),
@@ -285,7 +285,7 @@ class RenderTest(unittest.TestCase):
         ]
         headings = [
             label.split(" ")[0]
-            for label, _, _ in rows(render(Commits(runs, VIEW)))
+            for label, _, _ in rows(render(Commits(runs, VIEW, 5)))
             if "\x1b[90m·" in label  # a commit heading, grey from its hash on
         ]
         bar = squares(Squares(runs, DEFAULT_COLORS, 5).attrs["image"])
@@ -293,12 +293,28 @@ class RenderTest(unittest.TestCase):
         self.assertEqual(headings, ["a", "b", "a"])
         self.assertEqual(len(bar), len(headings))
 
+    def test_heads_the_commits_the_menu_bar_leaves_out(self):
+        runs = [
+            run(run_id=1, created="2026-09-25T11:50:00Z", head_sha="x"),
+            run(run_id=2, created="2026-09-25T11:40:00Z", head_sha="y"),
+            run(run_id=3, created="2026-09-25T11:30:00Z", head_sha="z"),
+        ]
+        body = render(Commits(runs, VIEW, 2)).partition("---\n")[2].split("\n")
+        marker = body.index(
+            "\x1b[90mNot in menu bar\x1b[0m | ansi=true font=Menlo size=11"
+        )
+
+        self.assertEqual(body[marker - 1], "---")  # after the bar's last commit
+        self.assertEqual(body[marker + 1], "---")  # and a line of its own under it
+        self.assertTrue(body[marker + 2].startswith("r \x1b[90m· z · main"))
+        self.assertNotIn("Not in menu bar", render(Commits(runs, VIEW, 3)))
+
     def test_separates_commits_like_the_menu_bar(self):
         runs = [
             run(run_id=1, created="2026-09-25T11:50:00Z", head_sha="x"),
             run(run_id=2, created="2026-09-25T11:40:00Z", head_sha="y"),
         ]
-        body = render(Commits(runs, VIEW)).partition("---\n")[2].split("\n")
+        body = render(Commits(runs, VIEW, 5)).partition("---\n")[2].split("\n")
         tops = [line for line in body if not line.startswith("--") or line == "---"]
 
         self.assertEqual(

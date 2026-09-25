@@ -14,25 +14,25 @@ Shows
     on one, a thin line between commits — orange while it is queued or running, green
     when it succeeded, red when it failed, grey when it was cancelled or
     skipped.
-    Dropdown: the same groups in the same order, then more: one per commit,
-    newest first across repos, a separator where the bar has its line. Each
-    commit is headed by a squircle, the worst of each workflow's latest run
-    on it, its repo's name, short hash, branch and message's first line;
-    its submenu has the full hash, author, commit time, the whole
-    message, and a row copying the hash. Each run's row has its
+    Dropdown: the same groups in the same order, then more under "Not in menu
+    bar": one per commit, newest first across repos, a separator where the bar
+    has its line. Each commit is headed by a squircle, the worst of each
+    workflow's latest run on it, its repo's name, short hash, branch and
+    message's first line; its submenu has the full hash, author, commit time,
+    the whole message, and a row copying the hash. Each run's row has its
     workflow and run number; its submenu has the trigger and duration, and
     links to the run and to its workflow's page. A failed run also names each
-    failed job and step, shows the last lines of its log before the error,
-    and offers to open the full failed log in Terminal.
+    failed job and step, shows the last lines of its log before the error, and
+    offers to open the full failed log in Terminal.
 
 Configure
     In ~/.config/swiftbar-plugins/github-actions.json, outside the repo, so
     which repos you watch is never committed. Every key is optional; the
     defaults are at the bottom of this file.
       squares   How many commits get squares in the menu bar, one per run
-                on each. Default 5.
+                on each. Default 3.
       listed    How many commits the dropdown lists, each with all its
-                runs. Default 15.
+                runs. Default 10.
       repos     ``owner/name`` repos to watch. Empty means the ``discover``
                 most recently pushed repos you have access to.
       discover  How many repos to look in when ``repos`` is empty. Default 10.
@@ -94,8 +94,8 @@ COLORS = palette(DEFAULT_COLORS, object_at(SETTINGS, "colors"))
 
 
 if __name__ == "__main__":
-    squares = int(number_at(SETTINGS, "squares") or 5)
-    listed = int(number_at(SETTINGS, "listed") or 15)
+    squares = int(number_at(SETTINGS, "squares") or 3)
+    listed = int(number_at(SETTINGS, "listed") or 10)
     repos = strings_at(SETTINGS, "repos")
     discover = int(number_at(SETTINGS, "discover") or 10)
     exclude = strings_at(SETTINGS, "exclude")
@@ -120,7 +120,7 @@ if __name__ == "__main__":
 
     show(
         Squares(found.runs, COLORS, squares),
-        Commits(shown, view) or Item("No workflow runs"),
+        Commits(shown, view, squares) or Item("No workflow runs"),
         [Problem(error) for error in found.errors],
         Separator(),
         Refresh(),

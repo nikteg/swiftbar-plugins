@@ -190,7 +190,8 @@ thin line between commits, so the bar below (■ standing for a squircle in the
 
 The dropdown has the same groups in the same order: one per commit, newest
 first across every repo, with a separator where the menu bar has its line, so
-the first groups are the bar's squircles one for one. Each commit is headed by
+the first groups are the bar's squircles one for one, and a grey "Not in menu
+bar" row heads the ones after them that the bar leaves out. Each commit is headed by
 a squircle, its repo's name and, in grey, its short hash, branch and the
 message's first line. Its submenu has the full hash, branch and author, when it
 was committed, the whole message (wrapped, since menus do
@@ -227,14 +228,19 @@ stops counting.
 ---
 ■ api · 5d20c4e · main · Log slow queries | ansi=true image=… font=Menlo length=70 href=...
 ---
+Not in menu bar | ansi=true font=Menlo size=11
+---
+■ api · 8b3e901 · main · Pin the Postgres version | ansi=true image=… font=Menlo length=70 href=...
+...
+---
 Refresh | refresh=true
 ```
 
 GitHub has no endpoint that lists runs across repos, so it takes two steps
 through `gh api`: `user/repos?sort=pushed` finds the ten repos you can access
 with the most recent pushes, then each one's `actions/runs` is fetched in
-parallel. The five newest commits get squircles in the menu bar and the
-fifteen newest are listed, each with every one of its runs. Runs
+parallel. The three newest commits get squircles in the menu bar and the ten
+newest are listed, each with every one of its runs. Runs
 are grouped by commit hash rather than by start time, which would split one
 push across a window boundary. A repo that errors (SSO not authorised, say) is
 listed with the error rather than hiding the rest.
@@ -289,7 +295,7 @@ and one group per commit in the same order in the dropdown, with a failed
 build's job, exit status and log tail.
 
 ```
-■ | ■ | ■ | ■ | ■
+■ | ■ | ■
 ---
 ■ web-app · 3f2c1ab · main · Add a retry to the upload client | ansi=true image=… font=Menlo length=70 href=...
 --3f2c1ab5e0d94c7a8b61f2e3d4c5b6a7980e1f2d | font=Menlo
