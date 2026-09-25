@@ -16,10 +16,15 @@ Shows
     with the shadow-length rule of thumb for that hour.
 
 Configure
-    Edit the call at the bottom of this file.
-      latitude, longitude  Defaults are Gothenburg.
-      skin_type            Fitzpatrick scale 1-6, as on the agency's own form.
-                           1 burns fastest, 6 slowest.
+    In ~/.config/swiftbar-plugins/soltid.json, outside the repo, since every
+    setting says something about you.
+      latitude, longitude  Where to calculate for. Until both are set the
+                           dropdown says so and nothing is fetched.
+      skin_type            The Fitzpatrick scale 1-6, as on the agency's own
+                           form; 1 burns fastest, 6 slowest. Defaults to 1,
+                           the cautious end.
+
+    {"latitude": 55.6, "longitude": 13.0, "skin_type": 3}
 
 Source
     Strålsäkerhetsmyndigheten's public suntime API.
@@ -31,6 +36,9 @@ Refresh
 from dataclasses import dataclass
 from datetime import datetime
 
+from swiftbar_lib import config
+from swiftbar_lib.components import Unconfigured
+from swiftbar_lib.data import number_at
 from swiftbar_lib.http import post_json
 from swiftbar_lib.output import show
 from swiftbar_lib.ui import Item, Title
@@ -93,11 +101,24 @@ def forecast(latitude: float, longitude: float, skin_type: int) -> Forecast:
 
 
 if __name__ == "__main__":
-    today = forecast(latitude=57.7095511309657, longitude=11.0, skin_type=2)
+    settings = config.load(__file__)
+    latitude = number_at(settings, "latitude")
+    longitude = number_at(settings, "longitude")
+    skin_type = int(number_at(settings, "skin_type") or 1)
+
+    today = (
+        forecast(latitude, longitude, skin_type)
+        if latitude is not None and longitude is not None
+        else None
+    )
 
     show(
-        Title(f"☀️ {today.hours[0].icon}") if today.hours else Title("☀️ —"),
-        Item(today.headline) if today.headline else None,
-        [Item(hour.described) for hour in today.hours]
-        or Item("No sun data for right now"),
+        Title(f"☀️ {today.hours[0].icon}") if today and today.hours else Title("☀️ —"),
+        [
+            Item(today.headline) if today.headline else None,
+            [Item(hour.described) for hour in today.hours]
+            or Item("No sun data for right now"),
+        ]
+        if today
+        else Unconfigured(__file__, "latitude", "longitude"),
     )
