@@ -219,16 +219,31 @@ def Commit(runs: list[Run], view: View) -> Node:
     ]
 
 
-def Commits(runs: list[Run], view: View) -> Node:
+def Commits(runs: list[Run], view: View, in_bar: int) -> Node:
     """The dropdown: one group per commit, in the menu bar's order.
 
     Newest first across every repo, a separator between commits where the
     menu bar has its line, so the first groups are the bar's squircles in the
-    same order and it is plain which is which.
+    same order and it is plain which is which. The ``in_bar`` commits the bar
+    shows come first; a "Not in menu bar" heading sets apart any that follow.
     """
+    commits = list(grouped(runs, lambda run: run.commit).values())
+
     return [
-        [Commit(commit, view), Separator()]
-        for commit in grouped(runs, lambda run: run.commit).values()
+        [
+            NotInMenuBar() if index == in_bar else None,
+            Commit(commit, view),
+            Separator(),
+        ]
+        for index, commit in enumerate(commits)
+    ]
+
+
+def NotInMenuBar() -> Node:
+    """Heads the commits the dropdown lists but the menu bar leaves out."""
+    return [
+        Item(colorize("Not in menu bar", "muted"), ansi=True, font=MONOSPACE, size=11),
+        Separator(),
     ]
 
 

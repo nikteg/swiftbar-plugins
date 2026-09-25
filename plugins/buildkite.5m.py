@@ -16,24 +16,24 @@ Shows
     running, green when it passed, red when it failed or is failing, grey
     when it was canceled or skipped. A build blocked on a manual step after
     passing so far counts as passed.
-    Dropdown: the same groups in the same order, then more: one per commit,
-    newest first, a separator where the bar has its line, each commit headed
-    by a squircle, the worst of each pipeline's latest build on it, its
-    repo's name, short hash, branch and message; its submenu has the full
-    hash, author and the whole message.
-    Each build's row has its pipeline and build number; its submenu has the
-    trigger and duration, and links to the build and its pipeline. A failed
-    build also names each failed job and its exit status, shows the last
-    lines of its log before the agent's error line, and offers to open the
-    first failed job's full log in Terminal.
+    Dropdown: the same groups in the same order, then more under "Not in menu
+    bar": one per commit, newest first, a separator where the bar has its
+    line, each commit headed by a squircle, the worst of each pipeline's
+    latest build on it, its repo's name, short hash, branch and message; its
+    submenu has the full hash, author and the whole message. Each build's row
+    has its pipeline and build number; its submenu has the trigger and
+    duration, and links to the build and its pipeline. A failed build also
+    names each failed job and its exit status, shows the last lines of its log
+    before the agent's error line, and offers to open the first failed job's
+    full log in Terminal.
 
 Configure
     In ~/.config/swiftbar-plugins/buildkite.json, outside the repo. Every key
     is optional; the defaults are at the bottom of this file.
       squares   How many commits get squares in the menu bar, one per build
-                on each. Default 5.
+                on each. Default 3.
       listed    How many commits the dropdown lists, each with all its
-                builds. Default 15.
+                builds. Default 10.
       repos     Only these. A pipeline building a GitHub repo is matched by
                 its ``owner/name``, any other by its pipeline slug.
       exclude   Never these, matched the same way.
@@ -86,8 +86,8 @@ COLORS = palette(DEFAULT_COLORS, object_at(SETTINGS, "colors"))
 
 
 if __name__ == "__main__":
-    squares = int(number_at(SETTINGS, "squares") or 5)
-    listed = int(number_at(SETTINGS, "listed") or 15)
+    squares = int(number_at(SETTINGS, "squares") or 3)
+    listed = int(number_at(SETTINGS, "listed") or 10)
     repos = strings_at(SETTINGS, "repos")
     exclude = strings_at(SETTINGS, "exclude")
 
@@ -114,7 +114,7 @@ if __name__ == "__main__":
 
     show(
         Squares(recent, COLORS, squares),
-        Commits(shown, view) or Item("No builds"),
+        Commits(shown, view, squares) or Item("No builds"),
         [Problem(error) for error in found.errors],
         Separator(),
         Refresh(),
