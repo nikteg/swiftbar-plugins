@@ -18,6 +18,7 @@ from plugin_loader import load
 from png_fixture import rows, squares
 from swiftbar_lib.ansi import rgb
 from swiftbar_lib.components import SOFT_COLORS, Action
+from swiftbar_lib.images import WARNING
 from swiftbar_lib.output import render
 from swiftbar_lib.ui import Separator
 
@@ -94,6 +95,7 @@ class TitleTest(unittest.TestCase):
         title = show(results).split("\n")[0]
         image = title.split("image=")[1].split()[0]
 
+        # Kimi Code's error draws red too, but as a warning triangle.
         self.assertEqual(squares(image), [[AMBER, GREEN, AMBER, RED, RED]])
 
 
@@ -325,7 +327,9 @@ class UsageColorTest(unittest.TestCase):
             activity=[ActivityWindow(label="Weekly"), ActivityWindow(label="5-hour")],
         )
 
-        self.assertEqual(Icon(Usage(extension, result)), SOFT_COLORS["critical"])
+        self.assertEqual(
+            Icon(Usage(extension, result)), (SOFT_COLORS["error"], WARNING)
+        )
 
 
 if __name__ == "__main__":

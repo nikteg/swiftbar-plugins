@@ -12,7 +12,9 @@
 Shows
     Menu bar: one squircle per provider, coloured by the worst quota it
     reports — green under 75% used, amber under 90%, red above, grey when
-    unknown. Drawn as an image, so the colours are softer than ANSI's.
+    unknown, and a red warning triangle when the provider could not be read
+    at all, so that is not mistaken for a full quota. Drawn as an image, so the
+    colours are softer than ANSI's.
     Dropdown: per provider, the plan, each quota window with a bar and its
     reset time, and local activity measured from session transcripts.
 
@@ -31,7 +33,7 @@ Configure
 
     The squircles' colours can be set in ~/.config/swiftbar-plugins/
     agent-usage.json, outside the repo: a colour per level — normal, warning,
-    critical, activity, unknown — as "#rrggbb", a 256-colour number, or a
+    critical, activity, unknown, error — as "#rrggbb", a 256-colour number, or a
     name. {"colors": {"warning": "#ff9500"}}
 
 Credentials
@@ -73,6 +75,7 @@ from swiftbar_lib.components import (
 )
 from swiftbar_lib.data import object_at
 from swiftbar_lib.dates import MONTHS, WEEKDAYS, relative
+from swiftbar_lib.images import WARNING
 from swiftbar_lib.meters import compact_number
 from swiftbar_lib.output import escape_strict, show
 from swiftbar_lib.ui import Item, Node, Separator, Title
@@ -131,8 +134,10 @@ def _usage_level(usage: Usage) -> str:
     # First: a provider that failed is not healthy, whatever else it reported.
     # DeepSeek returns local activity even on an HTTP error, and its budget
     # reads 0% when there has been no spend, which used to paint this green.
+    # Its own level rather than critical, so "could not read it" is not
+    # mistaken for "the limit is full": it is drawn as a warning triangle.
     if result.error:
-        return "critical"
+        return "error"
 
     if result.meters:
         return level_for(max(m.used_percent for m in result.meters))
@@ -152,9 +157,22 @@ def _usage_level(usage: Usage) -> str:
     return "unknown"
 
 
-def Icon(usage: Usage) -> str:
-    """A provider's squircle colour: the worst quota it reports."""
-    return SQUIRCLE_COLORS[_usage_level(usage)]
+def Icon(usage: Usage) -> str | tuple[str, str]:
+    """A provider's mark: its worst quota's colour, or a warning triangle."""
+    level = _usage_level(usage)
+    color = SQUIRCLE_COLORS[level]
+
+    return (color, WARNING) if level == "error" else color
+
+
+def Mark(usage: Usage) -> str:
+    """A provider heading's ``image=``: the same mark as in the menu bar."""
+    icon = Icon(usage)
+
+    if isinstance(icon, tuple):
+        return squircle(icon[0], shape=icon[1])
+
+    return squircle(icon)
 
 
 def Bar(*usages: Usage) -> Title:
@@ -231,7 +249,7 @@ def ProviderUsage(usage: Usage) -> Node:
     return [
         Item(
             escape_strict(heading),
-            image=squircle(Icon(usage)),
+            image=Mark(usage),
             symbolize=False,
             size=13,
             font="Menlo",

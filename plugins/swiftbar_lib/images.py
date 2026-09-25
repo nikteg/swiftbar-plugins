@@ -23,6 +23,17 @@ SCALE = 2
 
 RGB = tuple[int, int, int]
 
+#: A squircle's colour, or a colour and a shape to draw instead: "warning",
+#: a triangle with an exclamation mark.
+Mark = RGB | tuple[RGB, str]
+
+WARNING = "warning"
+
+#: The warning triangle, as corners in points on an 11pt square, and its
+#: exclamation mark as a stem and a dot: left, top, width, height.
+_TRIANGLE = ((5.5, 0.6), (10.9, 10.4), (0.1, 10.4))
+_EXCLAMATION = ((4.85, 3.4, 1.3, 3.6), (4.85, 7.9, 1.3, 1.3))
+
 
 def encode_png(
     width: int, height: int, rgba: bytes | bytearray, scale: int = SCALE
@@ -56,6 +67,25 @@ def encode_png(
 SEPARATOR = (139, 148, 158, 150)
 
 
+def _blend(pixels: bytearray, offset: int, color: list[int], alpha: float) -> None:
+    """Paints one pixel over what is already there, so edges blend into it.
+
+    Overwriting instead would leave a white mark's soft edge on a red
+    squircle part transparent, a dark fringe on a dark menu bar.
+    """
+    below = pixels[offset + 3] / 255
+    out = alpha + below * (1 - alpha)
+
+    if out <= 0:
+        return
+
+    mixed = (
+        round((c * alpha + b * below * (1 - alpha)) / out)
+        for c, b in zip(color, pixels[offset : offset + 3], strict=True)
+    )
+    pixels[offset : offset + 4] = bytes((*mixed, round(out * 255)))
+
+
 def _fill(
     pixels: bytearray,
     width: int,
@@ -83,7 +113,7 @@ def _fill(
 
             if coverage:
                 offset = (py * width + px) * 4
-                pixels[offset : offset + 4] = bytes((*color, round(coverage * alpha)))
+                _blend(pixels, offset, color, coverage * alpha / 255)
 
 
 #: How far an indented row's squircle starts, in points: about the width of
@@ -91,8 +121,48 @@ def _fill(
 INDENT = 13
 
 
+def _fill_polygon(
+    pixels: bytearray,
+    width: int,
+    corners: list[tuple[float, float]],
+    rgba: tuple[int, int, int, int],
+) -> None:
+    """Paints a convex polygon, corners in pixels, anti-aliased at its edges.
+
+    A pixel's distance outside is the largest of its distances to the edges'
+    lines, which is exact along an edge and sharpens only the corners.
+    """
+    height = len(pixels) // (width * 4)
+    cx = sum(x for x, _ in corners) / len(corners)
+    cy = sum(y for _, y in corners) / len(corners)
+    edges = []
+
+    for (ax, ay), (bx, by) in zip(corners, corners[1:] + corners[:1], strict=True):
+        length = math.hypot(bx - ax, by - ay)
+        nx, ny = (by - ay) / length, (ax - bx) / length
+
+        if (cx - ax) * nx + (cy - ay) * ny > 0:  # point the normal outwards
+            nx, ny = -nx, -ny
+
+        edges.append((ax, ay, nx, ny))
+
+    *color, alpha = rgba
+    xs, ys = [x for x, _ in corners], [y for _, y in corners]
+
+    for py in range(max(0, int(min(ys))), min(height, math.ceil(max(ys)))):
+        for px in range(max(0, int(min(xs))), min(width, math.ceil(max(xs)))):
+            outside = max(
+                (px + 0.5 - ax) * nx + (py + 0.5 - ay) * ny for ax, ay, nx, ny in edges
+            )
+            coverage = min(1.0, max(0.0, 0.5 - outside))
+
+            if coverage:
+                offset = (py * width + px) * 4
+                _blend(pixels, offset, color, coverage * alpha / 255)
+
+
 def squircles(
-    groups: list[list[RGB]],
+    groups: list[list[Mark]],
     size: float = 11,
     gap: float = 2,
     group_gap: float = 8,
@@ -107,11 +177,13 @@ def squircles(
     ``separator`` is drawn as a thin rounded bar in the middle of each gap
     between groups, like a pipe, ``separator_height`` tall so it stands above
     and below the squircles; None leaves the wider gap on its own.
+    A mark is a colour, or a colour and ``WARNING`` to draw a warning
+    triangle in it instead of a squircle.
     ``indent`` leaves clear space in front, for a dropdown row that hangs off
     the one above: SwiftBar puts a row's image before its text, so indenting
     the text would move it and leave the squircle where it was.
     """
-    squares: list[tuple[float, RGB]] = []
+    squares: list[tuple[float, Mark]] = []
     lines: list[float] = []
     x = INDENT if indent else 0.0
 
@@ -131,7 +203,25 @@ def squircles(
     height = math.ceil(tall * scale)
     pixels = bytearray(width * height * 4)
 
-    for left, color in squares:
+    for left, mark in squares:
+        color, shape = mark if isinstance(mark[1], str) else (mark, None)
+        unit = size / 11 * scale
+
+        if shape == WARNING:
+            corners = [(left * scale + x * unit, top + y * unit) for x, y in _TRIANGLE]
+            _fill_polygon(pixels, width, corners, (*color, 255))
+
+            for gx, gy, gw, gh in _EXCLAMATION:
+                stroke = (
+                    left * scale + gx * unit,
+                    top + gy * unit,
+                    gw * unit,
+                    gh * unit,
+                )
+                _fill(pixels, width, stroke, 0.6 * unit, (255, 255, 255, 255))
+
+            continue
+
         box = (left * scale, top, size * scale, size * scale)
         _fill(pixels, width, box, radius * scale, (*color, 255))
 

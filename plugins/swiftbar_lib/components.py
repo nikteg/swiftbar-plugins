@@ -38,15 +38,29 @@ SOFT_COLORS = {
     "critical": "#f85149",
     "activity": "#58a6ff",
     "unknown": "#8b949e",
+    #: Could not be read at all. Red like critical, since it wants looking
+    #: at too; it is drawn as a warning triangle instead of a squircle.
+    "error": "#f85149",
 }
 
 
-def squircle(color: Any, *, indent: bool = False) -> str:
+def _mark(entry: Any) -> Any:
+    """A colour, or a (colour, shape) pair, as ``images.squircles`` takes it."""
+    if isinstance(entry, tuple) and len(entry) == 2 and isinstance(entry[1], str):
+        return (rgb(entry[0]) or rgb("unknown"), entry[1])
+
+    return rgb(entry) or rgb("unknown")
+
+
+def squircle(color: Any, *, shape: str | None = None, indent: bool = False) -> str:
     """A row's ``image=``: one squircle in anything ``ansi.rgb`` reads.
 
-    With ``indent`` it starts further in, for a row hanging off the one above.
+    ``shape="warning"`` draws a warning triangle instead. With ``indent`` it
+    starts further in, for a row hanging off the one above.
     """
-    return base64_png(squircles([[rgb(color) or rgb("unknown")]], indent=indent))
+    mark = _mark((color, shape) if shape else color)
+
+    return base64_png(squircles([[mark]], indent=indent))
 
 
 def Squircles(
@@ -54,11 +68,12 @@ def Squircles(
 ) -> Title:
     """A menu bar of squircles, drawn as an image since ANSI cannot draw them.
 
-    ``groups`` are colours, anything ``ansi.rgb`` reads; with ``separators``
+    ``groups`` are colours, anything ``ansi.rgb`` reads, or (colour,
+    "warning") pairs for a warning triangle instead; with ``separators``
     a thin line sits between groups, otherwise just a wider gap.
     """
     image = squircles(
-        [[rgb(color) or rgb("unknown") for color in group] for group in groups],
+        [[_mark(entry) for entry in group] for group in groups],
         gap=gap,
         separator=SEPARATOR if separators else None,
     )
