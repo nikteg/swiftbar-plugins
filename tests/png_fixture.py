@@ -7,9 +7,10 @@ import base64
 import struct
 import zlib
 
-#: Wider than the 2pt gap inside a commit (4px), narrower than the 8pt
-#: between commits (16px, the separator line in it only part opaque).
-GROUP_GAP_PX = 8
+#: Wider than the gap inside a group — 2pt in the CI bar (4px), 3pt in
+#: agent-usage's (6px) — and narrower than the 8pt between commits (16px, the
+#: separator line in it only part opaque).
+GROUP_GAP_PX = 12
 
 
 def decode(png: bytes) -> tuple[int, int, list[bytes], float]:
@@ -33,25 +34,45 @@ def decode(png: bytes) -> tuple[int, int, list[bytes], float]:
 
 
 def squares(image: str) -> list[list[tuple[int, int, int]]]:
-    """The squares in a base64 image attribute, as colours grouped by commit."""
+    """The marks in a base64 image attribute, as colours grouped by commit.
+
+    A mark covers every column where some pixel is solid, so a triangle
+    counts at its base's width, not the narrower width at mid-height. Its
+    colour is read a quarter of the way in and near the bottom, which is
+    inside a squircle and a triangle alike and clear of the "!".
+    """
     width, height, rows, _ = decode(base64.b64decode(image))
-    middle = rows[height // 2]
+    solid = [any(row[x * 4 + 3] == 255 for row in rows) for x in range(width)]
+    spans: list[tuple[int, int]] = []
+    x = 0
+
+    while x < width:
+        if solid[x]:
+            start = x
+
+            while x < width and solid[x]:
+                x += 1
+
+            spans.append((start, x))
+        else:
+            x += 1
+
     groups: list[list[tuple[int, int, int]]] = []
-    gap = GROUP_GAP_PX
-    inside = False
+    previous_end = None
 
-    for x in range(width):
-        red, green, blue, alpha = middle[x * 4 : x * 4 + 4]
+    for start, end in spans:
+        if previous_end is None or start - previous_end >= GROUP_GAP_PX:
+            groups.append([])
 
-        if alpha == 255 and not inside:
-            if gap >= GROUP_GAP_PX:
-                groups.append([])
-
-            groups[-1].append((red, green, blue))
-            inside, gap = True, 0
-        elif alpha < 255:
-            inside = False
-            gap += 1
+        solid_rows = [
+            y
+            for y in range(height)
+            if any(rows[y][c * 4 + 3] == 255 for c in range(start, end))
+        ]
+        probe_x = start + (end - start) // 4
+        probe_y = solid_rows[0] + (solid_rows[-1] - solid_rows[0]) * 4 // 5
+        groups[-1].append(tuple(rows[probe_y][probe_x * 4 : probe_x * 4 + 3]))
+        previous_end = end
 
     return groups
 

@@ -1,7 +1,7 @@
 import unittest
 
 from png_fixture import decode, is_indented, squares
-from swiftbar_lib.images import INDENT, base64_png, squircles
+from swiftbar_lib.images import INDENT, WARNING, base64_png, squircles
 
 GREEN, RED = (63, 185, 80), (248, 81, 73)
 
@@ -68,3 +68,28 @@ class IndentTest(unittest.TestCase):
             all(row[3 : INDENT * 2 * 4 : 4] == bytes(INDENT * 2) for row in rows)
         )
         self.assertEqual(squares(base64_png(indented)), [[GREEN]])
+
+
+class WarningTest(unittest.TestCase):
+    def setUp(self):
+        _, _, self.rows, _ = decode(squircles([[(RED, WARNING)]]))
+
+    def pixel(self, x, y):
+        """RGBA at a point, in points from the top left."""
+        offset = round(x * 2) * 4
+
+        return tuple(self.rows[round(y * 2)][offset : offset + 4])
+
+    def test_draws_a_triangle_with_an_exclamation_mark_instead(self):
+        self.assertEqual(self.pixel(1, 1)[3], 0)  # a squircle's corner, clear here
+        self.assertEqual(self.pixel(2, 9.5), (*RED, 255))  # inside, near the base
+        self.assertEqual(self.pixel(5.5, 5), (255, 255, 255, 255))  # the stem
+        self.assertEqual(self.pixel(5.5, 8.5), (255, 255, 255, 255))  # the dot
+        self.assertEqual(self.pixel(5.5, 7.1), (*RED, 255))  # the gap between
+
+    def test_blends_the_marks_edges_into_the_red_instead_of_clearing_it(self):
+        around_the_mark = [
+            self.pixel(x / 2, y / 2) for y in range(7, 19) for x in range(9, 13)
+        ]
+
+        self.assertTrue(all(alpha == 255 for *_, alpha in around_the_mark))

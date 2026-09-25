@@ -69,8 +69,9 @@ its dropdown instead of guessing.
 ## [agent-usage.15m.py](plugins/agent-usage.15m.py)
 
 Coding agent subscription quotas and local spend: one squircle per provider,
-coloured by its worst quota — green under 75%, amber under 90%, red above, and
-red for a provider that failed. The squircles are [drawn as images](#squircles).
+coloured by its worst quota — green under 75%, amber under 90%, red above — and
+a red warning triangle for a provider that could not be read, so a failure is
+not mistaken for a full quota. The squircles are [drawn as images](#squircles).
 
 ```
 | image=iVBORw0KGgo… dropdown=false
@@ -113,7 +114,7 @@ show(
 
 `collect` returns each provider paired with what it reported, so a component
 takes one value. The squircles' colours can be changed per level — `normal`,
-`warning`, `critical`, `activity`, `unknown` — with `colors` in
+`warning`, `critical`, `activity`, `unknown`, `error` — with `colors` in
 `agent-usage.json`, the same way as for [github-actions](#github-actions1mpy).
 Argument order is the order of the squircles and of the dropdown sections.
 
@@ -492,7 +493,7 @@ kubecontext, `ProviderUsage` in agent-usage.
 | `shell` | Finding and running binaries despite SwiftBar's minimal `PATH` |
 | `notify` | macOS notifications, with AppleScript quoting handled |
 | `ansi` | Colours for menu rows: semantic names, 256-colour and hex, `rgb`, and `palette` for config overrides |
-| `images` | PNGs in plain Python: the squircles and their separators |
+| `images` | PNGs in plain Python: squircles, warning triangles and separators |
 | `meters` | Progress bars and compact number formatting |
 | `dates` | Parsing the timestamp shapes APIs return |
 

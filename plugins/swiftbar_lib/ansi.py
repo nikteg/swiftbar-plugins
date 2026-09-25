@@ -20,6 +20,7 @@ COLORS = {
     "unknown": 90,
     "accent": 35,
     "muted": 90,
+    "error": 31,
 }
 
 
@@ -33,6 +34,7 @@ _NAMED_RGB = {
     "unknown": (142, 142, 147),
     "accent": (175, 82, 222),
     "muted": (142, 142, 147),
+    "error": (255, 59, 48),
 }
 
 _HEX = re.compile(r"^#([0-9a-fA-F]{6})$")
