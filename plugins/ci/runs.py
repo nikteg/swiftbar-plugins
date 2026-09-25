@@ -87,8 +87,22 @@ class Latest:
     errors: list[str] = field(default_factory=list)
 
 
-def newest(runs: list[Run], limit: int) -> list[Run]:
-    return sorted(runs, key=lambda run: run.created_at, reverse=True)[:limit]
+def newest(runs: list[Run]) -> list[Run]:
+    return sorted(runs, key=lambda run: run.created_at, reverse=True)
+
+
+def first_commits(runs: list[Run], count: int) -> list[Run]:
+    """Every run of the ``count`` newest commits, none of them cut short."""
+    commits = list(grouped(runs, lambda run: run.commit).values())[:count]
+
+    return [run for commit in commits for run in commit]
+
+
+def whole_commits(runs: list[Run], limit: int) -> list[Run]:
+    """The ``limit`` newest runs, plus the rest of any commit they cut into."""
+    kept = {run.commit for run in runs[:limit]}
+
+    return [run for run in runs if run.commit in kept]
 
 
 def grouped[K](runs: list[Run], key: Callable[[Run], K]) -> dict[K, list[Run]]:

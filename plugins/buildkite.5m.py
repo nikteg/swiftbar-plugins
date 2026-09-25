@@ -11,8 +11,8 @@
 
 Shows
     The same menu as github-actions, for Buildkite builds.
-    Menu bar: one square per build for the newest few, newest first, the
-    builds of one commit side by side — orange while it is scheduled or
+    Menu bar: the newest few commits, newest first, a square for each build
+    on one, side by side — orange while it is scheduled or
     running, green when it passed, red when it failed or is failing, grey
     when it was canceled or skipped. A build blocked on a manual step after
     passing so far counts as passed.
@@ -26,8 +26,10 @@ Shows
 Configure
     In ~/.config/swiftbar-plugins/buildkite.json, outside the repo. Every key
     is optional; the defaults are at the bottom of this file.
-      squares   How many builds get a square in the menu bar. Default 5.
-      listed    How many builds the dropdown lists. Default 15.
+      squares   How many commits get squares in the menu bar, one per build
+                on each. Default 5.
+      listed    Roughly how many builds the dropdown lists. Default 15; a
+                commit the limit cuts into is listed whole.
       repos     Only these. A pipeline building a GitHub repo is matched by
                 its ``owner/name``, any other by its pipeline slug.
       exclude   Never these, matched the same way.
@@ -56,7 +58,7 @@ from datetime import UTC, datetime
 
 from ci import buildkite
 from ci.menu import Problem, Repo, Squares, View
-from ci.runs import DEFAULT_COLORS, Latest, diagnose, grouped, newest
+from ci.runs import DEFAULT_COLORS, Latest, diagnose, grouped, newest, whole_commits
 from swiftbar_lib import config
 from swiftbar_lib.ansi import palette
 from swiftbar_lib.data import number_at, object_at, strings_at
@@ -85,8 +87,8 @@ if __name__ == "__main__":
         if bk
         else Latest(errors=["bk not found on PATH"])
     )
-    recent = newest(found.runs, max(squares, listed))
-    shown = recent[:listed]
+    recent = newest(found.runs)
+    shown = whole_commits(recent, listed)
     view = View(
         now=datetime.now(UTC),
         colors=COLORS,
@@ -99,7 +101,7 @@ if __name__ == "__main__":
     )
 
     show(
-        Squares(recent[:squares], COLORS),
+        Squares(recent, COLORS, squares),
         [
             Repo(repo, runs, view)
             for repo, runs in grouped(shown, lambda r: r.repo).items()

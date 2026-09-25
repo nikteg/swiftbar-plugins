@@ -117,7 +117,11 @@ def latest(
     limit: int,
     actor: str | None,
 ) -> Latest:
-    """The ``limit`` newest runs across the watched repos, newest first."""
+    """The latest ``limit`` runs of each watched repo, newest first overall.
+
+    Not cut to ``limit`` in total: the menu counts commits, and a cut here
+    could split one.
+    """
     try:
         # Asks for enough extra to still have ``discover`` after excluding.
         candidates = (
@@ -147,7 +151,7 @@ def latest(
     runs = [run for result in fetched if isinstance(result, list) for run in result]
 
     return Latest(
-        newest(runs, limit), [result for result in fetched if isinstance(result, str)]
+        newest(runs), [result for result in fetched if isinstance(result, str)]
     )
 
 

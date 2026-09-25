@@ -22,7 +22,7 @@ from swiftbar_lib.components import (
 from swiftbar_lib.output import escape_strict
 from swiftbar_lib.ui import Item, Node, Separator
 
-from .runs import Diagnosis, FailedJob, Run, duration, grouped, overall
+from .runs import Diagnosis, FailedJob, Run, duration, first_commits, grouped, overall
 
 
 @dataclass(frozen=True)
@@ -40,9 +40,12 @@ def Square(run: Run, colors: dict[str, str | int]) -> str:
     return Indicator(colors[run.state], SQUARE)
 
 
-def Squares(runs: list[Run], colors: dict[str, str | int]) -> Node:
-    """The menu bar: a square per run, the runs of one commit side by side."""
-    commits = grouped(runs, lambda run: run.commit).values()
+def Squares(runs: list[Run], colors: dict[str, str | int], count: int) -> Node:
+    """The menu bar: the ``count`` newest commits, a square for each run on one.
+
+    The runs of a commit sit side by side, and a commit is never cut short.
+    """
+    commits = grouped(first_commits(runs, count), lambda run: run.commit).values()
 
     return Indicators(
         *(

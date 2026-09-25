@@ -10,8 +10,8 @@
 """The latest GitHub Actions runs across your repos.
 
 Shows
-    Menu bar: one square per run for the newest few, newest first, the runs
-    of one commit side by side — orange while it is queued or running, green
+    Menu bar: the newest few commits, newest first, a square for each run on
+    one, side by side — orange while it is queued or running, green
     when it succeeded, red when it failed, grey when it was cancelled or
     skipped.
     Dropdown: more of the latest runs, grouped by repo and then by commit.
@@ -26,8 +26,10 @@ Configure
     In ~/.config/swiftbar-plugins/github-actions.json, outside the repo, so
     which repos you watch is never committed. Every key is optional; the
     defaults are at the bottom of this file.
-      squares   How many runs get a square in the menu bar. Default 5.
-      listed    How many runs the dropdown lists. Default 15.
+      squares   How many commits get squares in the menu bar, one per run
+                on each. Default 5.
+      listed    Roughly how many runs the dropdown lists. Default 15; a
+                commit the limit cuts into is listed whole.
       repos     ``owner/name`` repos to watch. Empty means the ``discover``
                 most recently pushed repos you have access to.
       discover  How many repos to look in when ``repos`` is empty. Default 10.
@@ -71,7 +73,7 @@ from datetime import UTC, datetime
 
 from ci import github
 from ci.menu import Problem, Repo, Squares, View
-from ci.runs import DEFAULT_COLORS, Latest, diagnose, grouped
+from ci.runs import DEFAULT_COLORS, Latest, diagnose, grouped, whole_commits
 from swiftbar_lib import config
 from swiftbar_lib.ansi import palette
 from swiftbar_lib.data import number_at, object_at, string_at, strings_at
@@ -102,7 +104,7 @@ if __name__ == "__main__":
         if gh
         else Latest(errors=["gh not found on PATH"])
     )
-    shown = found.runs[:listed]
+    shown = whole_commits(found.runs, listed)
     view = View(
         now=datetime.now(UTC),
         colors=COLORS,
@@ -114,7 +116,7 @@ if __name__ == "__main__":
     )
 
     show(
-        Squares(found.runs[:squares], COLORS),
+        Squares(found.runs, COLORS, squares),
         [
             Repo(repo, runs, view)
             for repo, runs in grouped(shown, lambda r: r.repo).items()
