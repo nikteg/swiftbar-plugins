@@ -11,25 +11,29 @@
 
 Shows
     The same menu as github-actions, for Buildkite builds.
-    Menu bar: the newest few commits, newest first, a square for each build
-    on one, side by side — orange while it is scheduled or
+    Menu bar: the newest few commits, newest first, a squircle for each build
+    on one, a thin line between commits — orange while it is scheduled or
     running, green when it passed, red when it failed or is failing, grey
     when it was canceled or skipped. A build blocked on a manual step after
     passing so far counts as passed.
-    Dropdown: more of the latest builds, grouped by repo and then by commit,
-    each commit headed by a square, the worst of each pipeline's latest build
-    on it. Each build's submenu has the trigger and duration, and links to the
-    build and its pipeline. A failed build also names each failed job and its
-    exit status, shows the last lines of its log before the agent's error
-    line, and offers to open the first failed job's full log in Terminal.
+    Dropdown: the same groups in the same order, then more: one per commit,
+    newest first, a separator where the bar has its line, each commit headed
+    by a squircle, the worst of each pipeline's latest build on it, its
+    repo's name, short hash, branch and message; its submenu has the full
+    hash, author and the whole message.
+    Each build's row has its pipeline and build number; its submenu has the
+    trigger and duration, and links to the build and its pipeline. A failed
+    build also names each failed job and its exit status, shows the last
+    lines of its log before the agent's error line, and offers to open the
+    first failed job's full log in Terminal.
 
 Configure
     In ~/.config/swiftbar-plugins/buildkite.json, outside the repo. Every key
     is optional; the defaults are at the bottom of this file.
       squares   How many commits get squares in the menu bar, one per build
                 on each. Default 5.
-      listed    Roughly how many builds the dropdown lists. Default 15; a
-                commit the limit cuts into is listed whole.
+      listed    How many commits the dropdown lists, each with all its
+                builds. Default 15.
       repos     Only these. A pipeline building a GitHub repo is matched by
                 its ``owner/name``, any other by its pipeline slug.
       exclude   Never these, matched the same way.
@@ -57,8 +61,14 @@ Refresh
 from datetime import UTC, datetime
 
 from ci import buildkite
-from ci.menu import Problem, Repo, Squares, View
-from ci.runs import DEFAULT_COLORS, Latest, diagnose, grouped, newest, whole_commits
+from ci.menu import Commits, Problem, Squares, View
+from ci.runs import (
+    DEFAULT_COLORS,
+    Latest,
+    diagnose,
+    first_commits,
+    newest,
+)
 from swiftbar_lib import config
 from swiftbar_lib.ansi import palette
 from swiftbar_lib.data import number_at, object_at, strings_at
@@ -71,7 +81,7 @@ PLUGIN = "buildkite"
 #: This plugin's settings from outside the repo; see Configure above.
 SETTINGS = config.load(__file__)
 
-#: The colour of each state's square, overridable by ``colors`` in SETTINGS.
+#: The colour of each state's squircle, overridable by ``colors`` in SETTINGS.
 COLORS = palette(DEFAULT_COLORS, object_at(SETTINGS, "colors"))
 
 
@@ -83,12 +93,14 @@ if __name__ == "__main__":
 
     bk = which("bk")
     found = (
-        buildkite.builds(bk, repos, exclude, max(squares, listed))
+        # A commit can have a build per pipeline, so ask for enough of them
+        # to fill every group; Buildkite pages at 100.
+        buildkite.builds(bk, repos, exclude, min(100, 3 * max(squares, listed)))
         if bk
         else Latest(errors=["bk not found on PATH"])
     )
     recent = newest(found.runs)
-    shown = whole_commits(recent, listed)
+    shown = first_commits(recent, listed)
     view = View(
         now=datetime.now(UTC),
         colors=COLORS,
@@ -102,11 +114,7 @@ if __name__ == "__main__":
 
     show(
         Squares(recent, COLORS, squares),
-        [
-            Repo(repo, runs, view)
-            for repo, runs in grouped(shown, lambda r: r.repo).items()
-        ]
-        or Item("No builds"),
+        Commits(shown, view) or Item("No builds"),
         [Problem(error) for error in found.errors],
         Separator(),
         Refresh(),

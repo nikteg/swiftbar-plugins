@@ -76,7 +76,6 @@ class ParseBuildTest(unittest.TestCase):
         build = buildkite.parse_build(raw(), BK)
 
         self.assertEqual(build.repo, "acme/web-app")
-        self.assertEqual(build.repo_url, "https://github.com/acme/web-app")
         self.assertEqual(
             build.commit_url, "https://github.com/acme/web-app/commit/abcdef1234567890"
         )
@@ -86,9 +85,7 @@ class ParseBuildTest(unittest.TestCase):
         pipeline = {"slug": "infra", "repository": "https://gitlab.com/acme/infra.git"}
         build = buildkite.parse_build(raw(pipeline=pipeline), BK)
 
-        self.assertEqual(
-            (build.repo, build.repo_url, build.commit_url), ("infra", None, None)
-        )
+        self.assertEqual((build.repo, build.commit_url), ("infra", None))
 
     def test_reads_github_remotes_in_both_forms(self):
         for remote in (

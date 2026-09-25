@@ -10,17 +10,20 @@
 """The latest GitHub Actions runs across your repos.
 
 Shows
-    Menu bar: the newest few commits, newest first, a square for each run on
-    one, side by side — orange while it is queued or running, green
+    Menu bar: the newest few commits, newest first, a squircle for each run
+    on one, a thin line between commits — orange while it is queued or running, green
     when it succeeded, red when it failed, grey when it was cancelled or
     skipped.
-    Dropdown: more of the latest runs, grouped by repo and then by commit.
-    Each commit is headed by a square, the worst of each workflow's latest
-    run on it, and its short hash, branch and title. Each run's submenu has
-    the trigger and duration, and links to the run and to its workflow's
-    page. A failed run also names each failed job and step, shows the last
-    lines of its log before the error, and offers to open the full failed log
-    in Terminal.
+    Dropdown: the same groups in the same order, then more: one per commit,
+    newest first across repos, a separator where the bar has its line. Each
+    commit is headed by a squircle, the worst of each workflow's latest run
+    on it, its repo's name, short hash, branch and message's first line;
+    its submenu has the full hash, author, commit time, the whole
+    message, and a row copying the hash. Each run's row has its
+    workflow and run number; its submenu has the trigger and duration, and
+    links to the run and to its workflow's page. A failed run also names each
+    failed job and step, shows the last lines of its log before the error,
+    and offers to open the full failed log in Terminal.
 
 Configure
     In ~/.config/swiftbar-plugins/github-actions.json, outside the repo, so
@@ -28,8 +31,8 @@ Configure
     defaults are at the bottom of this file.
       squares   How many commits get squares in the menu bar, one per run
                 on each. Default 5.
-      listed    Roughly how many runs the dropdown lists. Default 15; a
-                commit the limit cuts into is listed whole.
+      listed    How many commits the dropdown lists, each with all its
+                runs. Default 15.
       repos     ``owner/name`` repos to watch. Empty means the ``discover``
                 most recently pushed repos you have access to.
       discover  How many repos to look in when ``repos`` is empty. Default 10.
@@ -37,9 +40,9 @@ Configure
                 them, so it still finds ``discover`` others.
       actor     A login, or ``@me``, to show only runs that person triggered.
       colors    A colour per state — running, success, failure, other — as
-                "#rrggbb", an xterm-256 number, or a name such as "warning".
-                Unset ones keep the defaults, which follow the menu's ANSI
-                palette.
+                "#rrggbb", a 256-colour number, or a name such as "warning".
+                Unset ones keep the defaults, GitHub's own softer shades; the
+                squircles are images, so any colour draws exactly.
 
     {"exclude": ["acme/legacy-app"], "colors": {"running": "#ff9500"}}
 
@@ -72,8 +75,8 @@ Refresh
 from datetime import UTC, datetime
 
 from ci import github
-from ci.menu import Problem, Repo, Squares, View
-from ci.runs import DEFAULT_COLORS, Latest, diagnose, grouped, whole_commits
+from ci.menu import Commits, Problem, Squares, View
+from ci.runs import DEFAULT_COLORS, Latest, diagnose, first_commits
 from swiftbar_lib import config
 from swiftbar_lib.ansi import palette
 from swiftbar_lib.data import number_at, object_at, string_at, strings_at
@@ -86,7 +89,7 @@ PLUGIN = "github-actions"
 #: This plugin's settings from outside the repo; see Configure above.
 SETTINGS = config.load(__file__)
 
-#: The colour of each state's square, overridable by ``colors`` in SETTINGS.
+#: The colour of each state's squircle, overridable by ``colors`` in SETTINGS.
 COLORS = palette(DEFAULT_COLORS, object_at(SETTINGS, "colors"))
 
 
@@ -104,7 +107,7 @@ if __name__ == "__main__":
         if gh
         else Latest(errors=["gh not found on PATH"])
     )
-    shown = whole_commits(found.runs, listed)
+    shown = first_commits(found.runs, listed)
     view = View(
         now=datetime.now(UTC),
         colors=COLORS,
@@ -117,11 +120,7 @@ if __name__ == "__main__":
 
     show(
         Squares(found.runs, COLORS, squares),
-        [
-            Repo(repo, runs, view)
-            for repo, runs in grouped(shown, lambda r: r.repo).items()
-        ]
-        or Item("No workflow runs"),
+        Commits(shown, view) or Item("No workflow runs"),
         [Problem(error) for error in found.errors],
         Separator(),
         Refresh(),

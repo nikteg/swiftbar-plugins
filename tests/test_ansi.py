@@ -1,7 +1,14 @@
 import unittest
 
-from swiftbar_lib.ansi import colorize, nearest_256, palette, sgr
-from swiftbar_lib.components import SQUARE, Indicator
+from swiftbar_lib.ansi import (
+    colorize,
+    nearest_256,
+    palette,
+    rgb,
+    sgr,
+    swiftbar_256,
+    xterm_256,
+)
 from swiftbar_lib.output import render
 from swiftbar_lib.ui import Title
 
@@ -29,21 +36,38 @@ class SgrTest(unittest.TestCase):
 
 
 class Nearest256Test(unittest.TestCase):
-    def test_finds_exact_cube_and_grey_entries(self):
+    def test_finds_colours_swiftbar_draws_exactly(self):
+        cases = [((255, 0, 0), 196), ((0, 0, 0), 16), ((128, 128, 128), 244)]
+
+        for color, expected in cases:
+            with self.subTest(color=color):
+                self.assertEqual(nearest_256(*color), expected)
+
+    def test_matches_what_swiftbar_draws_not_what_xterm_does(self):
+        # xterm's 203 is a soft red, (255, 95, 95); SwiftBar draws it orange,
+        # and nothing it can draw is any closer to that red.
+        self.assertEqual(xterm_256(203), (255, 95, 95))
+        self.assertEqual(swiftbar_256(203), (255, 102, 0))
+        self.assertEqual(swiftbar_256(nearest_256(255, 95, 95)), (255, 102, 0))
+
+
+class RgbTest(unittest.TestCase):
+    def test_reads_every_colour_sgr_accepts(self):
         cases = [
-            ((255, 0, 0), 196),
-            ((0, 0, 0), 16),
-            ((255, 255, 255), 231),
-            ((128, 128, 128), 244),
+            ("#3fb950", (63, 185, 80)),
+            ("normal", (52, 199, 89)),
+            (196, (255, 0, 0)),
+            (244, (128, 128, 128)),
         ]
 
-        for rgb, expected in cases:
-            with self.subTest(rgb=rgb):
-                self.assertEqual(nearest_256(*rgb), expected)
+        for color, expected in cases:
+            with self.subTest(color=color):
+                self.assertEqual(rgb(color), expected)
 
-    def test_rounds_an_off_palette_colour_to_its_neighbour(self):
-        # Apple's system orange sits between cube steps.
-        self.assertEqual(nearest_256(255, 149, 0), 208)
+    def test_rejects_anything_that_is_not_a_colour(self):
+        for color in ("orange", 3, 256, True, None):
+            with self.subTest(color=color):
+                self.assertIsNone(rgb(color))
 
 
 class PaletteTest(unittest.TestCase):
@@ -63,6 +87,6 @@ class PaletteTest(unittest.TestCase):
                 self.assertEqual(palette(self.DEFAULTS, overrides), self.DEFAULTS)
 
     def test_a_256_colour_survives_rendering(self):
-        output = render(Title(Indicator("#ff8700", SQUARE), ansi=True))
+        output = render(Title(colorize("■", "#ff8700"), ansi=True))
 
         self.assertTrue(output.startswith("\x1b[38;5;208m■\x1b[0m |"), output)

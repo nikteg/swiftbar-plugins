@@ -7,18 +7,12 @@ arguments are its data, not the same three values passed down every level.
 
 from __future__ import annotations
 
+import textwrap
 from dataclasses import dataclass, field
 from datetime import datetime
 
 from swiftbar_lib.ansi import colorize
-from swiftbar_lib.components import (
-    MONOSPACE,
-    SQUARE,
-    Indicator,
-    Indicators,
-    Link,
-    elbow,
-)
+from swiftbar_lib.components import MONOSPACE, Action, Link, Squircles, squircle
 from swiftbar_lib.output import escape_strict
 from swiftbar_lib.ui import Item, Node, Separator
 
@@ -36,22 +30,17 @@ class View:
     nouns: tuple[str, str] = ("run", "workflow")
 
 
-def Square(run: Run, colors: dict[str, str | int]) -> str:
-    return Indicator(colors[run.state], SQUARE)
-
-
 def Squares(runs: list[Run], colors: dict[str, str | int], count: int) -> Node:
-    """The menu bar: the ``count`` newest commits, a square for each run on one.
+    """The menu bar: the ``count`` newest commits, a squircle for each run on one.
 
-    The runs of a commit sit side by side, and a commit is never cut short.
+    The runs of a commit sit together with a line between commits, and a
+    commit is never cut short.
     """
     commits = grouped(first_commits(runs, count), lambda run: run.commit).values()
 
-    return Indicators(
-        *(
-            ["".join(Square(run, colors) for run in commit) for commit in commits]
-            or [Indicator(colors["other"], SQUARE)]
-        )
+    return Squircles(
+        [[colors[run.state] for run in commit] for commit in commits]
+        or [[colors["other"]]]
     )
 
 
@@ -108,8 +97,9 @@ def WorkflowRun(run: Run, view: View) -> Node:
     )
 
     return Item(
-        elbow(f"{Square(run, view.colors)} {escape_strict(run.workflow)} · {when}"),
-        Item(f"#{run.number} · {run.event} by {run.actor}", font=MONOSPACE),
+        f"{escape_strict(run.workflow)} "
+        + colorize(f"#{run.number} · {when}", "muted"),
+        Item(f"{run.event} by {run.actor}", font=MONOSPACE),
         Item(Outcome(run, view.now), font=MONOSPACE),
         Failure(view.diagnoses.get(run.id)),
         Separator(),
@@ -123,25 +113,104 @@ def WorkflowRun(run: Run, view: View) -> Node:
         )
         if run.state == "failure" and run.log_command
         else None,
-        href=run.url,
         ansi=True,
+        href=run.url,
+        image=squircle(view.colors[run.state]),
         font=MONOSPACE,
         length=70,
     )
 
 
+#: Menus do not wrap, so a message's long lines are wrapped to this many
+#: characters in the submenu.
+MESSAGE_WIDTH = 80
+
+
+def message_lines(message: str) -> list[str | None]:
+    """A commit message as submenu rows: lines wrapped, None between paragraphs.
+
+    A line starting with a dash would read as a deeper submenu level, so a
+    bullet becomes • and any other leading dash a hyphen that is not one.
+    """
+    rows: list[str | None] = []
+
+    for line in message.strip().splitlines():
+        if not line.strip():
+            if rows and rows[-1] is not None:
+                rows.append(None)
+            continue
+
+        if line.lstrip().startswith(("- ", "* ")):
+            line = "• " + line.lstrip()[2:]
+        elif line.startswith("-"):
+            line = "\u2010" + line[1:]
+
+        rows.extend(textwrap.wrap(line, MESSAGE_WIDTH) or [line])
+
+    return rows
+
+
+def CommitDetails(head: Run, now: datetime) -> Node:
+    """What a commit's submenu says about it before its message."""
+    committed = (
+        f"Committed {duration((now - head.committed_at).total_seconds())} ago"
+        f" · {head.committed_at.astimezone():%a %d %b %H:%M}"
+        if head.committed_at
+        else None
+    )
+
+    return [
+        Item(head.sha, font=MONOSPACE) if head.sha else None,
+        Item(
+            " · ".join(part for part in (head.branch, head.author) if part),
+            font=MONOSPACE,
+        )
+        if head.branch or head.author
+        else None,
+        Item(committed, font=MONOSPACE) if committed else None,
+    ]
+
+
 def Commit(runs: list[Run], view: View) -> Node:
-    """A commit's heading, linking to it, over the runs it triggered."""
+    """A commit's heading, over the runs it triggered.
+
+    The heading leads with the repo's name, since commits from different
+    repos sit side by side, as they do in the menu bar, and ends with the
+    message's first line, cut to fit. Its submenu has the full hash, author
+    and time, the whole message, and a link to the
+    commit, since a row with a submenu opens it on click rather than
+    following its own link.
+    """
     head = runs[0]
-    heading = " · ".join(
+    name = head.repo.rpartition("/")[2]
+    details = " · ".join(
         part for part in (head.sha[:7], head.branch, head.title) if part
     )
 
     return [
         Item(
-            f"{Indicator(view.colors[overall(runs)], SQUARE)} "
-            + colorize(escape_strict(heading), "muted"),
+            f"{escape_strict(name)} "
+            + colorize(f"· {escape_strict(details)}", "muted"),
+            CommitDetails(head, view.now),
+            Separator(),
+            [
+                Item(line, font=MONOSPACE) if line is not None else Separator()
+                for line in message_lines(head.message)
+            ],
+            Separator(),
+            Link("Open commit", head.commit_url) if head.commit_url else None,
+            # SwiftBar attributes cannot hold a |, so no shell pipe to pbcopy.
+            Action(
+                "Copy hash",
+                "/usr/bin/osascript",
+                "-e",
+                f'set the clipboard to "{head.sha}"',
+                refresh=False,
+            )
+            if head.sha
+            else None,
             ansi=True,
+            image=squircle(view.colors[overall(runs)]),
             font=MONOSPACE,
             length=70,
             href=head.commit_url,
@@ -150,14 +219,16 @@ def Commit(runs: list[Run], view: View) -> Node:
     ]
 
 
-def Repo(repo: str, runs: list[Run], view: View) -> Node:
+def Commits(runs: list[Run], view: View) -> Node:
+    """The dropdown: one group per commit, in the menu bar's order.
+
+    Newest first across every repo, a separator between commits where the
+    menu bar has its line, so the first groups are the bar's squircles in the
+    same order and it is plain which is which.
+    """
     return [
-        Item(repo, font=MONOSPACE, size=13, href=runs[0].repo_url),
-        [
-            Commit(commit, view)
-            for commit in grouped(runs, lambda run: run.commit).values()
-        ],
-        Separator(),
+        [Commit(commit, view), Separator()]
+        for commit in grouped(runs, lambda run: run.commit).values()
     ]
 
 

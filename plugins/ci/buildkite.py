@@ -80,19 +80,23 @@ def parse_build(raw: dict, bk: str) -> Run | None:
     status = string_at(raw, "state") or ""
     repo = github_repo(string_at(pipeline, "repository") or "")
     sha = string_at(raw, "commit") or ""
+    message = string_at(raw, "message") or ""
     first_failed = next((string_at(job, "id") for job in failed(raw.get("jobs"))), None)
 
     return Run(
         id=build_id,
         attempt=1,
         repo=repo or slug,
-        repo_url=f"https://github.com/{repo}" if repo else None,
         workflow=string_at(pipeline, "name") or slug,
         workflow_key=slug,
         workflow_url=string_at(pipeline, "web_url"),
         sha=sha,
         commit_url=f"https://github.com/{repo}/commit/{sha}" if repo and sha else None,
-        title=(string_at(raw, "message") or "").split("\n")[0],
+        title=message.split("\n")[0],
+        message=message,
+        author=string_at(object_at(raw, "author"), "name") or "",
+        # Buildkite reports when the build was made, not the commit.
+        committed_at=None,
         number=int(number_at(raw, "number") or 0),
         branch=string_at(raw, "branch") or "",
         event=string_at(raw, "source") or "",

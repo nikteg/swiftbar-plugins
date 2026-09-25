@@ -10,14 +10,15 @@
 """Coding agent subscription quotas and local spend.
 
 Shows
-    Menu bar: one circle per provider, coloured by the worst quota it reports
-    — green under 75% used, yellow under 90%, red above, grey when unknown.
+    Menu bar: one squircle per provider, coloured by the worst quota it
+    reports — green under 75% used, amber under 90%, red above, grey when
+    unknown. Drawn as an image, so the colours are softer than ANSI's.
     Dropdown: per provider, the plan, each quota window with a bar and its
     reset time, and local activity measured from session transcripts.
 
 Configure
     Edit the run() call at the bottom of this file. Argument order is the
-    order of the circles and of the dropdown sections, so reordering or
+    order of the squircles and of the dropdown sections, so reordering or
     dropping a provider is a one-line change.
       claude(profile)      One Claude profile. No argument uses ~/.claude.
                            Pass a ClaudeProfile for a second account; the id
@@ -28,9 +29,9 @@ Configure
                            Rolling 30-day.
       kimi(), deepseek()   No configuration.
 
-    The circles' colours can be set in ~/.config/swiftbar-plugins/
+    The squircles' colours can be set in ~/.config/swiftbar-plugins/
     agent-usage.json, outside the repo: a colour per level — normal, warning,
-    critical, activity, unknown — as "#rrggbb", an xterm-256 number, or a
+    critical, activity, unknown — as "#rrggbb", a 256-colour number, or a
     name. {"colors": {"warning": "#ff9500"}}
 
 Credentials
@@ -62,24 +63,25 @@ from agent_usage.providers import ClaudeProfile
 from agent_usage.types import ProviderExtension
 from swiftbar_lib import config
 from swiftbar_lib.ansi import COLORS, RESET, level_for, palette
-from swiftbar_lib.components import Action, Indicator, Indicators, Meter, elbow
+from swiftbar_lib.components import (
+    SOFT_COLORS,
+    Action,
+    Meter,
+    Squircles,
+    elbow,
+    squircle,
+)
 from swiftbar_lib.data import object_at
 from swiftbar_lib.dates import MONTHS, WEEKDAYS, relative
 from swiftbar_lib.meters import compact_number
 from swiftbar_lib.output import escape_strict, show
-from swiftbar_lib.ui import Item, Node, Separator
+from swiftbar_lib.ui import Item, Node, Separator, Title
 
 HOME = os.environ.get("HOME", "")
 
-#: The circles' colour per level, overridable by ``colors`` in this plugin's
-#: config file.
-CIRCLE_COLORS = palette(
-    {
-        level: level
-        for level in ("normal", "warning", "critical", "activity", "unknown")
-    },
-    object_at(config.load(__file__), "colors"),
-)
+#: The squircles' colour per level, overridable by ``colors`` in this
+#: plugin's config file.
+SQUIRCLE_COLORS = palette(SOFT_COLORS, object_at(config.load(__file__), "colors"))
 
 
 def _ansi(text: str, color: int | str) -> str:
@@ -151,8 +153,13 @@ def _usage_level(usage: Usage) -> str:
 
 
 def Icon(usage: Usage) -> str:
-    """The menu bar circle, coloured by the worst quota this provider reports."""
-    return Indicator(CIRCLE_COLORS[_usage_level(usage)])
+    """A provider's squircle colour: the worst quota it reports."""
+    return SQUIRCLE_COLORS[_usage_level(usage)]
+
+
+def Bar(*usages: Usage) -> Title:
+    """The menu bar: a squircle per provider, in the order given."""
+    return Squircles([[Icon(usage) for usage in usages]], gap=3, separators=False)
 
 
 def Activity(
@@ -223,8 +230,8 @@ def ProviderUsage(usage: Usage) -> Node:
 
     return [
         Item(
-            f"{Icon(usage)} {escape_strict(heading)}",
-            ansi=True,
+            escape_strict(heading),
+            image=squircle(Icon(usage)),
             symbolize=False,
             size=13,
             font="Menlo",
@@ -252,7 +259,7 @@ if __name__ == "__main__":
         print(clear_cache())
         raise SystemExit(0)
 
-    # Order here is the order of the circles and of the dropdown sections.
+    # Order here is the order of the squircles and of the dropdown sections.
     claude_default, claude_personal, codex, deepseek = collect(
         providers.claude(
             ClaudeProfile(
@@ -277,9 +284,7 @@ if __name__ == "__main__":
     )
 
     show(
-        Indicators(
-            Icon(claude_default), Icon(claude_personal), Icon(codex), Icon(deepseek)
-        ),
+        Bar(claude_default, claude_personal, codex, deepseek),
         ProviderUsage(claude_default),
         Separator(),
         ProviderUsage(claude_personal),

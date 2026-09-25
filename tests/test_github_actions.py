@@ -6,17 +6,17 @@ from datetime import UTC, datetime
 from unittest import mock
 
 from ci import github
-from ci.menu import Repo, Square, Squares, View, WorkflowRun
+from ci.menu import Commits, Squares, View, WorkflowRun, message_lines
 from ci.runs import (
     DEFAULT_COLORS,
     FailedJob,
     diagnose,
     duration,
-    grouped,
+    first_commits,
     overall,
-    whole_commits,
 )
 from plugin_loader import load
+from png_fixture import rows, squares
 from swiftbar_lib import config
 from swiftbar_lib import state as state_files
 from swiftbar_lib.output import render
@@ -24,6 +24,9 @@ from swiftbar_lib.output import render
 NOW = datetime(2026, 9, 25, 12, 0, tzinfo=UTC)
 GH = "/opt/homebrew/bin/gh"
 VIEW = View(NOW, DEFAULT_COLORS)
+
+#: The default squircle colours, as the images' pixels come back.
+GREEN, ORANGE, RED, GREY = (63, 185, 80), (210, 153, 34), (248, 81, 73), (139, 148, 158)
 
 
 def read(run):
@@ -37,7 +40,11 @@ def raw(run_id, created, status="completed", conclusion="success", **extra):
         "name": "CI",
         "display_title": "Fix the thing",
         "head_sha": f"sha{run_id}",
-        "head_commit": {"message": "Fix the thing\n\nWith a body."},
+        "head_commit": {
+            "message": "Fix the thing\n\nWith a body.",
+            "author": {"name": "Octo Cat"},
+            "timestamp": "2026-09-25T11:40:00Z",
+        },
         "run_number": run_id,
         "head_branch": "main",
         "event": "push",
@@ -190,12 +197,13 @@ class RenderTest(unittest.TestCase):
             run(run_id=2, created="2026-09-25T11:45:00Z", head_sha="sha1"),
             run(run_id=3, created="2026-09-25T11:40:00Z", conclusion="failure"),
         ]
-        title = render(Squares(runs, DEFAULT_COLORS, 5)).split("\n")[0]
+        title = Squares(runs, DEFAULT_COLORS, 5)
 
-        self.assertTrue(
-            title.startswith("\x1b[33m■\x1b[0m\x1b[32m■\x1b[0m \x1b[31m■\x1b[0m |"),
-            title,
+        self.assertEqual(
+            squares(title.attrs["image"]),
+            [[ORANGE, GREEN], [RED]],
         )
+        self.assertEqual(render(title).split(" | ")[0], "")
 
     def test_counts_commits_not_runs_and_never_cuts_one_short(self):
         runs = [
@@ -205,12 +213,13 @@ class RenderTest(unittest.TestCase):
             run(run_id=4, created="2026-09-25T11:47:00Z", head_sha="b"),
             run(run_id=5, created="2026-09-25T11:46:00Z", head_sha="c"),
         ]
-        title = render(Squares(runs, DEFAULT_COLORS, 2)).split(" | ")[0]
-        green = "\x1b[32m■\x1b[0m"
+        title = Squares(runs, DEFAULT_COLORS, 2)
 
-        self.assertEqual(title, f"{green}{green} {green}{green}")
+        self.assertEqual(
+            squares(title.attrs["image"]), [[GREEN, GREEN], [GREEN, GREEN]]
+        )
 
-    def test_lists_the_rest_of_a_commit_the_limit_cuts_into(self):
+    def test_lists_a_number_of_whole_commits(self):
         runs = [
             run(run_id=1, created="2026-09-25T11:50:00Z", head_sha="a"),
             run(run_id=2, created="2026-09-25T11:49:00Z", head_sha="b"),
@@ -218,59 +227,84 @@ class RenderTest(unittest.TestCase):
             run(run_id=4, created="2026-09-25T11:47:00Z", head_sha="c"),
         ]
 
-        self.assertEqual([r.id for r in whole_commits(runs, 2)], ["1", "2", "3"])
+        self.assertEqual([r.id for r in first_commits(runs, 2)], ["1", "2", "3"])
 
     def test_draws_a_grey_square_when_there_are_no_runs(self):
-        self.assertTrue(
-            render(Squares([], DEFAULT_COLORS, 5)).startswith("\x1b[90m■\x1b[0m |")
+        self.assertEqual(
+            squares(Squares([], DEFAULT_COLORS, 5).attrs["image"]), [[GREY]]
         )
 
-    def test_heads_each_commit_over_its_runs(self):
+    def test_heads_each_commit_with_its_repo_over_its_runs(self):
         runs = [
             run(run_id=1, created="2026-09-25T11:50:00Z", head_sha="abcdef123456"),
             run(run_id=2, created="2026-09-25T11:45:00Z", head_sha="abcdef123456"),
             run(run_id=3, created="2026-09-25T11:40:00Z"),
         ]
-        output = render(Repo("o/r", runs, VIEW))
-        body = output.partition("---\n")[2]
-        lines = [line.split(" | ")[0] for line in body.split("\n")]
+        output = render(Commits(runs, VIEW))
 
         self.assertEqual(
-            [line for line in lines if not line.startswith("--")],
+            rows(output),
             [
-                "o/r",
-                "\x1b[32m■\x1b[0m \x1b[90mabcdef1 · main · Fix the thing\x1b[0m",
-                "\x1b[90m  └\x1b[0m \x1b[32m■\x1b[0m CI · 5m ago",
-                "\x1b[90m  └\x1b[0m \x1b[32m■\x1b[0m CI · 5m ago",
-                "\x1b[32m■\x1b[0m \x1b[90msha3 · main · Fix the thing\x1b[0m",
-                "\x1b[90m  └\x1b[0m \x1b[32m■\x1b[0m CI · 5m ago",
+                ("r \x1b[90m· abcdef1 · main · Fix the thing\x1b[0m", [GREEN], False),
+                ("CI \x1b[90m#1 · 5m ago\x1b[0m", [GREEN], False),
+                ("CI \x1b[90m#2 · 5m ago\x1b[0m", [GREEN], False),
+                ("r \x1b[90m· sha3 · main · Fix the thing\x1b[0m", [GREEN], False),
+                ("CI \x1b[90m#3 · 5m ago\x1b[0m", [GREEN], False),
             ],
         )
-        self.assertIn("href=https://github.com/o/r/commit/abcdef123456", output)
+        self.assertIn(
+            "\n--abcdef123456 | font=Menlo\n"
+            "--main · Octo Cat | font=Menlo\n"
+            "--Committed 20m ago · Fri 25 Sep "
+            + datetime(2026, 9, 25, 11, 40, tzinfo=UTC).astimezone().strftime("%H:%M")
+            + " | font=Menlo\n"
+            "-----\n"
+            "--Fix the thing | font=Menlo\n"
+            "-----\n"
+            "--With a body. | font=Menlo\n"
+            "-----\n"
+            "--Open commit | href=https://github.com/o/r/commit/abcdef123456\n"
+            '--Copy hash | bash=/usr/bin/osascript param1=-e param2="set the clipboard'
+            ' to \\"abcdef123456\\"" terminal=false refresh=false\n',
+            output,
+        )
 
-    def test_groups_runs_under_their_repo_in_order_of_the_newest(self):
+    def test_wraps_a_message_for_a_menu_that_does_not(self):
+        message = "Title\n\n\n" + "word " * 30 + "\n- a bullet\n-- flag\n"
+        lines = message_lines(message)
+
+        self.assertEqual(lines[:2], ["Title", None])
+        self.assertTrue(all(len(line) <= 80 for line in lines if line))
+        self.assertEqual(lines[-2:], ["• a bullet", "\u2010- flag"])
+
+    def test_lists_commits_in_the_menu_bars_order_across_repos(self):
         runs = [
             run(repo="o/a", run_id=1, created="2026-09-25T11:50:00Z"),
             run(repo="o/b", run_id=2, created="2026-09-25T11:40:00Z"),
             run(repo="o/a", run_id=3, created="2026-09-25T11:30:00Z"),
         ]
-        output = render(
-            [
-                Repo(repo, group, VIEW)
-                for repo, group in grouped(runs, lambda r: r.repo).items()
-            ]
-        )
-        headings = [line for line in output.split("\n") if "size=13" in line]
+        headings = [
+            label.split(" ")[0]
+            for label, _, _ in rows(render(Commits(runs, VIEW)))
+            if "\x1b[90m·" in label  # a commit heading, grey from its hash on
+        ]
+        bar = squares(Squares(runs, DEFAULT_COLORS, 5).attrs["image"])
+
+        self.assertEqual(headings, ["a", "b", "a"])
+        self.assertEqual(len(bar), len(headings))
+
+    def test_separates_commits_like_the_menu_bar(self):
+        runs = [
+            run(run_id=1, created="2026-09-25T11:50:00Z", head_sha="x"),
+            run(run_id=2, created="2026-09-25T11:40:00Z", head_sha="y"),
+        ]
+        body = render(Commits(runs, VIEW)).partition("---\n")[2].split("\n")
+        tops = [line for line in body if not line.startswith("--") or line == "---"]
 
         self.assertEqual(
-            headings,
-            [
-                "o/a | font=Menlo size=13 href=https://github.com/o/a/actions",
-                "o/b | font=Menlo size=13 href=https://github.com/o/b/actions",
-            ],
+            [line == "---" for line in tops],
+            [False, False, True, False, False],
         )
-
-        self.assertLess(output.index("runs/3"), output.index("o/b |"))
 
     def test_colours_a_commit_by_each_workflows_latest_run(self):
         def at(minute, **fields):
@@ -312,13 +346,14 @@ class RenderTest(unittest.TestCase):
         running = run(run_id=7, created="2026-09-25T11:57:00Z", status="in_progress")
         output = render(WorkflowRun(running, VIEW))
 
-        self.assertIn(
-            "\x1b[90m  └\x1b[0m \x1b[33m■\x1b[0m CI · running 3m | "
-            "href=https://github.com/o/r/actions/runs/7 ansi=true",
-            output,
+        self.assertEqual(
+            rows(output), [("CI \x1b[90m#7 · running 3m\x1b[0m", [ORANGE], False)]
         )
         self.assertIn(
-            "--#7 · push by me | font=Menlo\n--In progress for 3m | font=Menlo", output
+            "ansi=true href=https://github.com/o/r/actions/runs/7 image=", output
+        )
+        self.assertIn(
+            "--push by me | font=Menlo\n--In progress for 3m | font=Menlo", output
         )
         self.assertIn(
             "--Open run | href=https://github.com/o/r/actions/runs/7\n"
@@ -446,8 +481,10 @@ class ColorsTest(unittest.TestCase):
         configured = load("github-actions.1m.py")
         running = run(run_id=1, created="2026-09-25T11:50:00Z", status="in_progress")
 
-        self.assertEqual(Square(running, configured.COLORS), "\x1b[38;5;208m■\x1b[0m")
-        self.assertEqual(configured.COLORS["failure"], "critical")
+        output = render(WorkflowRun(running, View(NOW, configured.COLORS)))
+
+        self.assertEqual(rows(output)[0][1], [(255, 135, 0)])
+        self.assertEqual(configured.COLORS["failure"], DEFAULT_COLORS["failure"])
 
 
 class DurationTest(unittest.TestCase):
