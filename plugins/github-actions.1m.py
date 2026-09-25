@@ -14,13 +14,13 @@ Shows
     on one, a thin line between commits — orange while it is queued or running, green
     when it succeeded, red when it failed, grey when it was cancelled or
     skipped.
-    Dropdown: the same groups in the same order, then more under "Not in menu
-    bar": one per commit, newest first across repos, a separator where the bar
-    has its line. Each commit is headed by a squircle, the worst of each
-    workflow's latest run on it, its repo's name, short hash, branch and
-    message's first line; its submenu has the full hash, author, commit time,
-    the whole message, and a row copying the hash. Each run's row has its
-    workflow and run number; its submenu has the trigger and duration, and
+    Dropdown: the same groups in the same order, then the rest in a "more
+    commits" submenu: one per commit, newest first across repos, a separator
+    where the bar has its line. Each commit is headed by a squircle, the worst
+    of each workflow's latest run on it, its repo's name, short hash, branch
+    and message's first line; its submenu has the full hash, author, commit
+    time, the whole message, and a row copying the hash. Each run's row has
+    its workflow and run number; its submenu has the trigger and duration, and
     links to the run and to its workflow's page. A failed run also names each
     failed job and step, shows the last lines of its log before the error, and
     offers to open the full failed log in Terminal.

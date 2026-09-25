@@ -190,8 +190,8 @@ thin line between commits, so the bar below (■ standing for a squircle in the
 
 The dropdown has the same groups in the same order: one per commit, newest
 first across every repo, with a separator where the menu bar has its line, so
-the first groups are the bar's squircles one for one, and a grey "Not in menu
-bar" row heads the ones after them that the bar leaves out. Each commit is headed by
+the first groups are the bar's squircles one for one, and the ones after them
+that the bar leaves out sit in a "More (7)" submenu below. Each commit is headed by
 a squircle, its repo's name and, in grey, its short hash, branch and the
 message's first line. Its submenu has the full hash, branch and author, when it
 was committed, the whole message (wrapped, since menus do
@@ -228,10 +228,9 @@ stops counting.
 ---
 ■ api · 5d20c4e · main · Log slow queries | ansi=true image=… font=Menlo length=70 href=...
 ---
-Not in menu bar | ansi=true font=Menlo size=11
----
-■ api · 8b3e901 · main · Pin the Postgres version | ansi=true image=… font=Menlo length=70 href=...
-...
+More (7) | font=Menlo
+--■ api · 8b3e901 · main · Pin the Postgres version | ansi=true image=… font=Menlo length=70 href=...
+--...
 ---
 Refresh | refresh=true
 ```
