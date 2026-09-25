@@ -68,14 +68,14 @@ its dropdown instead of guessing.
 
 ## [agent-usage.15m.py](plugins/agent-usage.15m.py)
 
-Coding agent subscription quotas and local spend: one circle per provider,
+Coding agent subscription quotas and local spend: one squircle per provider,
 coloured by its worst quota — green under 75%, amber under 90%, red above, and
-red for a provider that failed.
+red for a provider that failed. The squircles are [drawn as images](#squircles).
 
 ```
-● ● ● ●
+| image=iVBORw0KGgo… dropdown=false
 ---
-● Claude Default · TEAM
+Claude Default · TEAM | image=iVBORw0KGgo… symbolize=false size=13 font=Menlo
 Weekly: ●○○○○○○○○○○○ 6% used · resets Thu Sep 24 19:00 (in 4d 2h)
   └ 1.1B processed tokens · 11.7M uncached tokens · 3459 calls · local activity
 5-hour: ●○○○○○○○○○○○ 12% used · resets 20:10 (in 3h 22m)
@@ -102,7 +102,7 @@ claude_default, claude_personal, codex, deepseek = collect(
 )
 
 show(
-    Indicators(Icon(claude_default), Icon(claude_personal), Icon(codex), Icon(deepseek)),
+    Bar(claude_default, claude_personal, codex, deepseek),
     ProviderUsage(claude_default),
     Separator(),
     ProviderUsage(claude_personal),
@@ -112,10 +112,10 @@ show(
 ```
 
 `collect` returns each provider paired with what it reported, so a component
-takes one value. The circles' colours can be changed per level — `normal`,
+takes one value. The squircles' colours can be changed per level — `normal`,
 `warning`, `critical`, `activity`, `unknown` — with `colors` in
-`agent-usage.json`, the same way as for [github-actions](#github-actions1mpy). Argument order is the order of the circles and of the
-dropdown sections.
+`agent-usage.json`, the same way as for [github-actions](#github-actions1mpy).
+Argument order is the order of the squircles and of the dropdown sections.
 
 Credentials are read where each agent already stores them — the Claude Code
 Keychain entry, the Codex and Kimi auth files, the Pi auth file for DeepSeek —
@@ -181,32 +181,50 @@ dropdown rather than failing silently.
 
 ## [github-actions.1m.py](plugins/github-actions.1m.py)
 
-The latest GitHub Actions runs across your repos: one square per run, newest
-first — orange while queued or running, green for success, red for a failure,
-grey when cancelled or skipped. Squares rather than circles, so they are not
-mistaken for agent-usage. The runs of one commit sit side by side, so the bar
-below is three pushes.
+The latest GitHub Actions runs across your repos: one squircle per run, newest
+first — amber while queued or running, green for success, red for a failure,
+grey when cancelled or skipped. The runs of one commit sit side by side with a
+thin line between commits, so the bar below (■ standing for a squircle in the
+[image](#squircles)) is three pushes.
 
-The dropdown groups runs by repo and then by commit. Each commit is headed by a
-square and, in grey, its short hash, branch and title, linking to it. The
-square is the worst of each workflow's latest run on that commit — red if any
+The dropdown has the same groups in the same order: one per commit, newest
+first across every repo, with a separator where the menu bar has its line, so
+the first groups are the bar's squircles one for one. Each commit is headed by
+a squircle, its repo's name and, in grey, its short hash, branch and the
+message's first line. Its submenu has the full hash, branch and author, when it
+was committed, the whole message (wrapped, since menus do
+not wrap), a link to the commit and a row that copies its hash. Buildkite does
+not report commit times, so its submenus leave that line out. The squircle is the worst of each workflow's latest run on that
+commit — red if any
 failed, orange if any is still running — so a failure a later run has fixed
 stops counting.
 
 ```
-■■ ■■ ■
+■■ | ■■ | ■
 ---
-acme/web-app | font=Menlo size=13 href=https://github.com/acme/web-app/actions
-■ 3f2c1ab · main · Add a retry to the upload client | ansi=true font=Menlo length=70 href=https://github.com/acme/web-app/commit/3f2c1ab...
-  └ ■ Code scanning · 10m ago | href=https://github.com/acme/web-app/actions/runs/1002 ansi=true font=Menlo length=70
-  └ ■ CI · running 13m | href=https://github.com/acme/web-app/actions/runs/1001 ansi=true font=Menlo length=70
---#70 · push by octocat | font=Menlo
+■ web-app · 3f2c1ab · main · Add a retry to the upload client | ansi=true image=… font=Menlo length=70 href=...
+--3f2c1ab5e0d94c7a8b61f2e3d4c5b6a7980e1f2d | font=Menlo
+--main · Octo Cat | font=Menlo
+--Committed 14m ago · Fri 25 Sep 11:46 | font=Menlo
+-----
+--Add a retry to the upload client | font=Menlo
+-----
+--Uploads over a flaky connection failed on the first dropped packet. | font=Menlo
+-----
+--Open commit | href=https://github.com/acme/web-app/commit/3f2c1ab...
+--Copy hash | bash=/usr/bin/osascript param1=-e ... terminal=false refresh=false
+■ Code scanning #58 · 10m ago | href=https://github.com/acme/web-app/actions/runs/1002 image=… font=Menlo length=70
+■ CI #70 · running 13m | href=https://github.com/acme/web-app/actions/runs/1001 image=… font=Menlo length=70
+--push by octocat | font=Menlo
 --In progress for 13m | font=Menlo
 -----
 --Open run | href=https://github.com/acme/web-app/actions/runs/1001
 --Open workflow | href=https://github.com/acme/web-app/actions/workflows/ci.yml
-■ 9e41d07 · main · Drop the unused settings page | ansi=true font=Menlo length=70 href=...
+---
+■ web-app · 9e41d07 · main · Drop the unused settings page | ansi=true image=… font=Menlo length=70 href=...
 ...
+---
+■ api · 5d20c4e · main · Log slow queries | ansi=true image=… font=Menlo length=70 href=...
 ---
 Refresh | refresh=true
 ```
@@ -214,8 +232,8 @@ Refresh | refresh=true
 GitHub has no endpoint that lists runs across repos, so it takes two steps
 through `gh api`: `user/repos?sort=pushed` finds the ten repos you can access
 with the most recent pushes, then each one's `actions/runs` is fetched in
-parallel. The five newest commits get squares, one per run, and about the
-fifteen newest runs are listed; neither cuts a commit short. Runs
+parallel. The five newest commits get squircles in the menu bar and the
+fifteen newest are listed, each with every one of its runs. Runs
 are grouped by commit hash rather than by start time, which would split one
 push across a window boundary. A repo that errors (SSO not authorised, say) is
 listed with the error rather than hiding the rest.
@@ -232,16 +250,13 @@ Which repos you watch is personal, so it is configured outside the repo, in
 
 `repos` watches a fixed list instead of discovering, `exclude` leaves repos out
 by `owner/name`, `actor` shows only one person's runs (`@me` for yours), and
-`squares`, `listed` and `discover` change the counts. `colors` sets the square
-for each state — `running`, `success`, `failure`, `other` — as `"#rrggbb"`, an
-xterm-256 number or a name such as `"warning"`:
+`squares`, `listed` and `discover` change the counts. `colors` sets the
+squircle for each state — `running`, `success`, `failure`, `other` — as
+`"#rrggbb"`, a 256-colour number or a name such as `"warning"`:
 
 ```json
 { "colors": { "running": "#ff9500" } }
 ```
-
-SwiftBar reads 256-colour codes but not 24-bit ones, so a hex colour is matched
-to the nearest of the 256.
 
 A failed run shows why, without opening a browser:
 
@@ -268,17 +283,25 @@ component.
 
 ## [buildkite.5m.py](plugins/buildkite.5m.py)
 
-The same menu for Buildkite builds, every five minutes: squares in the bar, and
-builds grouped by repo and then by commit in the dropdown, with a failed build's
-job, exit status and log tail.
+The same menu for Buildkite builds, every five minutes: squircles in the bar,
+and one group per commit in the same order in the dropdown, with a failed
+build's job, exit status and log tail.
 
 ```
-■ ■ ■ ■ ■
+■ | ■ | ■ | ■ | ■
 ---
-acme/web-app | font=Menlo size=13 href=https://github.com/acme/web-app
-■ 3f2c1ab · main · Add a retry to the upload client | ansi=true font=Menlo length=70 href=https://github.com/acme/web-app/commit/3f2c1ab...
-  └ ■ Web app · 12m ago | href=https://buildkite.com/acme/web-app/builds/7 ansi=true font=Menlo length=70
---#7 · webhook by Octo Cat | font=Menlo
+■ web-app · 3f2c1ab · main · Add a retry to the upload client | ansi=true image=… font=Menlo length=70 href=...
+--3f2c1ab5e0d94c7a8b61f2e3d4c5b6a7980e1f2d | font=Menlo
+--main · Octo Cat | font=Menlo
+--Committed 14m ago · Fri 25 Sep 11:46 | font=Menlo
+-----
+--Add a retry to the upload client | font=Menlo
+-----
+--Uploads over a flaky connection failed on the first dropped packet. | font=Menlo
+-----
+--Open commit | href=https://github.com/acme/web-app/commit/3f2c1ab...
+■ Web app #7 · 12m ago | href=https://buildkite.com/acme/web-app/builds/7 image=… font=Menlo length=70
+--webhook by Octo Cat | font=Menlo
 --Failed in 5m | font=Menlo
 -----
 --✗ Test › exit 1 | ansi=true font=Menlo href=https://buildkite.com/acme/web-app/builds/7#...
@@ -458,7 +481,7 @@ kubecontext, `ProviderUsage` in agent-usage.
 | Module | For |
 | --- | --- |
 | `ui` | The node types: `Title`, `Item`, `Separator`, `Refresh` |
-| `components` | Rows that recur: `Indicators`, `Meter`, `Action`, `Link`, `elbow` |
+| `components` | Rows that recur: `Squircles`, `squircle`, `Meter`, `Action`, `Link`, `elbow` |
 | `output` | Rendering a node tree to SwiftBar's line format, and the escaping |
 | `errors` | `clean_error`, for a failure a plugin renders as a row |
 | `http` | JSON/text with timeouts, parallel fetches, graceful failures |
@@ -468,7 +491,8 @@ kubecontext, `ProviderUsage` in agent-usage.
 | `jsonl_cache` | Reading append-only logs incrementally across runs |
 | `shell` | Finding and running binaries despite SwiftBar's minimal `PATH` |
 | `notify` | macOS notifications, with AppleScript quoting handled |
-| `ansi` | Colours for menu rows: semantic names, xterm-256 and hex, and `palette` for config overrides |
+| `ansi` | Colours for menu rows: semantic names, 256-colour and hex, `rgb`, and `palette` for config overrides |
+| `images` | PNGs in plain Python: the squircles and their separators |
 | `meters` | Progress bars and compact number formatting |
 | `dates` | Parsing the timestamp shapes APIs return |
 
@@ -478,6 +502,21 @@ into rows before it parses quotes, so a newline in an attribute value forges a
 whole extra row. `render` strips both from labels and attributes, keeping ESC
 in labels so a coloured row still works; `escape_strict` removes that too and
 is what provider-controlled text goes through.
+
+### Squircles
+
+The status marks in agent-usage, github-actions and buildkite are images, not
+text. SwiftBar colours text only through ANSI: the basic codes are the macOS
+system colours, and its 256-colour table is not xterm's — it divides without
+flooring and takes blue from the wrong digit, so most codes draw some other
+colour and no soft green or red is reachable at all. An `image=` has no such
+limit, and gets a real rounded corner.
+
+`images` draws them in plain Python with zlib and struct: anti-aliased from
+each pixel's distance to the shape, at twice the size and marked 144 dpi so it
+stays sharp on a Retina menu bar. The default colours are
+GitHub's own success, attention, danger and muted shades (`SOFT_COLORS`),
+which read well on a light and a dark menu bar alike.
 
 ## Adding a plugin
 

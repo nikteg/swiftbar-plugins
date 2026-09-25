@@ -8,6 +8,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime
 
 from swiftbar_lib import state
+from swiftbar_lib.components import SOFT_COLORS
 from swiftbar_lib.errors import clean_error
 from swiftbar_lib.http import gather
 
@@ -17,12 +18,12 @@ MAX_FAILED_JOBS = 3
 
 FAILURES_FILE = "failures.json"
 
-#: The colour of each state's square, before a plugin's ``colors`` setting.
+#: The colour of each state's squircle, before a plugin's ``colors`` setting.
 DEFAULT_COLORS = {
-    "running": "warning",
-    "success": "normal",
-    "failure": "critical",
-    "other": "unknown",
+    "running": SOFT_COLORS["warning"],
+    "success": SOFT_COLORS["normal"],
+    "failure": SOFT_COLORS["critical"],
+    "other": SOFT_COLORS["unknown"],
 }
 
 ANSI_CODE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
@@ -36,14 +37,18 @@ class Run:
     attempt: int
     #: ``owner/name`` for a GitHub repo, otherwise a Buildkite pipeline slug.
     repo: str
-    repo_url: str | None
     workflow: str
     #: What makes two runs the same workflow: its file, or its pipeline slug.
     workflow_key: str
     workflow_url: str | None
     sha: str
     commit_url: str | None
+    #: The commit message's first line, and all of it.
     title: str
+    message: str
+    #: Who wrote the commit, and when, where the source says.
+    author: str
+    committed_at: datetime | None
     number: int
     branch: str
     event: str
@@ -96,13 +101,6 @@ def first_commits(runs: list[Run], count: int) -> list[Run]:
     commits = list(grouped(runs, lambda run: run.commit).values())[:count]
 
     return [run for commit in commits for run in commit]
-
-
-def whole_commits(runs: list[Run], limit: int) -> list[Run]:
-    """The ``limit`` newest runs, plus the rest of any commit they cut into."""
-    kept = {run.commit for run in runs[:limit]}
-
-    return [run for run in runs if run.commit in kept]
 
 
 def grouped[K](runs: list[Run], key: Callable[[Run], K]) -> dict[K, list[Run]]:

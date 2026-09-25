@@ -15,12 +15,21 @@ from agent_usage.types import (
 from builtins_fixture import EXTENSIONS
 from builtins_fixture import LOCAL_ACTIVITY_BUDGETS as BUDGETS
 from plugin_loader import load
-from swiftbar_lib.components import Action, Indicators
+from png_fixture import rows, squares
+from swiftbar_lib.ansi import rgb
+from swiftbar_lib.components import SOFT_COLORS, Action
 from swiftbar_lib.output import render
 from swiftbar_lib.ui import Separator
 
 plugin = load("agent-usage.15m.py")
-Icon, ProviderUsage = plugin.Icon, plugin.ProviderUsage
+
+#: The squircle colours, as the images' pixels come back.
+GREEN, AMBER, RED = (
+    rgb(SOFT_COLORS["normal"]),
+    rgb(SOFT_COLORS["warning"]),
+    rgb(SOFT_COLORS["critical"]),
+)
+Bar, Icon, ProviderUsage = plugin.Bar, plugin.Icon, plugin.ProviderUsage
 
 
 def pair(result, providers):
@@ -41,7 +50,7 @@ def show(results, extensions=None, plugin_path="/plugin/agent-usage.15m.py"):
 
     return render(
         [
-            Indicators(*(Icon(usage) for usage in paired)),
+            Bar(*paired),
             [[ProviderUsage(usage), Separator()] for usage in paired],
             Action("Clear local usage caches", plugin_path, "--clear-cache"),
         ]
@@ -51,9 +60,12 @@ def show(results, extensions=None, plugin_path="/plugin/agent-usage.15m.py"):
 class TitleTest(unittest.TestCase):
     def test_renders_a_valid_swiftbar_title_and_menu(self):
         output = show([ProviderResult(name="Codex", meters=[Meter("Weekly", 40)])])
-        self.assertTrue(output.startswith("\x1b[32m●\x1b[0m | ansi=true"), output)
-        self.assertIn("font=Menlo size=13", output.split("\n")[0])
-        self.assertIn("\x1b[32m●\x1b[0m Codex | ansi=true", output)
+        title = output.split("\n")[0]
+        image = title.split("image=")[1].split()[0]
+
+        self.assertEqual(squares(image), [[GREEN]])
+        self.assertIn("dropdown=false", title)
+        self.assertEqual(rows(output)[0], ("Codex", [GREEN], False))
         self.assertNotIn("--Weekly", output)
 
     def test_renders_filled_circles_colored_by_usage_state(self):
@@ -79,8 +91,10 @@ class TitleTest(unittest.TestCase):
                 ],
             ),
         ]
-        expected = " ".join(f"\x1b[{color}m●\x1b[0m" for color in (33, 32, 33, 31, 31))
-        self.assertTrue(show(results).split("\n")[0].startswith(expected))
+        title = show(results).split("\n")[0]
+        image = title.split("image=")[1].split()[0]
+
+        self.assertEqual(squares(image), [[AMBER, GREEN, AMBER, RED, RED]])
 
 
 class ResetTest(unittest.TestCase):
@@ -311,7 +325,7 @@ class UsageColorTest(unittest.TestCase):
             activity=[ActivityWindow(label="Weekly"), ActivityWindow(label="5-hour")],
         )
 
-        self.assertIn("\x1b[31m", Icon(Usage(extension, result)))
+        self.assertEqual(Icon(Usage(extension, result)), SOFT_COLORS["critical"])
 
 
 if __name__ == "__main__":

@@ -10,19 +10,13 @@ from __future__ import annotations
 from typing import Any
 
 from . import config
-from .ansi import colorize, level_for
+from .ansi import colorize, level_for, rgb
+from .images import SEPARATOR, base64_png, squircles
 from .meters import BAR_WIDTH, bar, round_half_up
 from .output import escape_strict
 from .ui import Item, Title
 
 MONOSPACE = "Menlo"
-
-#: Shapes for ``Indicator``. A plugin picks its own so two status bars side by
-#: side are told apart at a glance. Unicode has no filled squircle; the
-#: rounded square is an outline.
-CIRCLE = "●"
-SQUARE = "■"
-ROUNDED_SQUARE = "▢"
 
 
 def elbow(text: str) -> str:
@@ -34,21 +28,42 @@ def elbow(text: str) -> str:
     return f"{colorize('  └', 'muted')} {text}"
 
 
-def Indicator(color: str | int, shape: str = CIRCLE) -> str:
-    """One status mark, in anything ``ansi.sgr`` takes: "critical", 208, "#ff9500"."""
-    return colorize(shape, color)
+#: Status colours for squircles, softer than the macOS system colours ANSI
+#: gets: GitHub's own success, attention, danger, accent and muted shades,
+#: which read well on both a light and a dark menu bar. Keyed by the same
+#: level names as ``ansi.COLORS``, so ``level_for`` picks one.
+SOFT_COLORS = {
+    "normal": "#3fb950",
+    "warning": "#d29922",
+    "critical": "#f85149",
+    "activity": "#58a6ff",
+    "unknown": "#8b949e",
+}
 
 
-def Indicators(*indicators: str) -> Title:
-    """A menu bar of status marks, as ``Indicator`` draws them."""
-    return Title(
-        *indicators,
-        ansi=True,
-        symbolize=False,
-        font=MONOSPACE,
-        size=13,
-        dropdown=False,
+def squircle(color: Any, *, indent: bool = False) -> str:
+    """A row's ``image=``: one squircle in anything ``ansi.rgb`` reads.
+
+    With ``indent`` it starts further in, for a row hanging off the one above.
+    """
+    return base64_png(squircles([[rgb(color) or rgb("unknown")]], indent=indent))
+
+
+def Squircles(
+    groups: list[list[Any]], *, gap: float = 2, separators: bool = True
+) -> Title:
+    """A menu bar of squircles, drawn as an image since ANSI cannot draw them.
+
+    ``groups`` are colours, anything ``ansi.rgb`` reads; with ``separators``
+    a thin line sits between groups, otherwise just a wider gap.
+    """
+    image = squircles(
+        [[rgb(color) or rgb("unknown") for color in group] for group in groups],
+        gap=gap,
+        separator=SEPARATOR if separators else None,
     )
+
+    return Title("", image=base64_png(image), dropdown=False)
 
 
 def Unconfigured(plugin: str, *keys: str) -> Item:
