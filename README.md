@@ -7,6 +7,7 @@ one small toolkit.
 plugins/              one self-contained file per plugin
 plugins/swiftbar_lib/ the toolkit every plugin shares
 plugins/agent_usage/  agent-usage's data collection; no menu code
+plugins/ci/           what github-actions and buildkite share, menu included
 tests/                offline test suite
 ```
 
@@ -257,6 +258,48 @@ rather than from check-run annotations because a fine-grained token often
 cannot read annotations. A finished run's log never changes, so each failed run
 attempt is read once and kept in `failures.json` in the plugin's cache
 directory.
+
+Everything but the settings and the menu lives in `ci/`, shared with
+[buildkite](#buildkite5mpy): the run model, the failure cache, and every menu
+component.
+
+---
+
+## [buildkite.5m.py](plugins/buildkite.5m.py)
+
+The same menu for Buildkite builds, every five minutes: squares in the bar, and
+builds grouped by repo and then by commit in the dropdown, with a failed build's
+job, exit status and log tail.
+
+```
+■ ■ ■ ■ ■
+---
+acme/web-app | font=Menlo size=13 href=https://github.com/acme/web-app
+■ 3f2c1ab · main · Add a retry to the upload client | ansi=true font=Menlo length=70 href=https://github.com/acme/web-app/commit/3f2c1ab...
+  └ ■ Web app · 12m ago | href=https://buildkite.com/acme/web-app/builds/7 ansi=true font=Menlo length=70
+--#7 · webhook by Octo Cat | font=Menlo
+--Failed in 5m | font=Menlo
+-----
+--✗ Test › exit 1 | ansi=true font=Menlo href=https://buildkite.com/acme/web-app/builds/7#...
+--│ expected 2 to equal 3 | font=Menlo size=11 length=100
+--│ 🚨 Error: The command exited with status 1 | font=Menlo size=11 length=100
+-----
+--Open build | href=https://buildkite.com/acme/web-app/builds/7
+--Open pipeline | href=https://buildkite.com/acme/web-app
+--Show failed log in Terminal | bash=/opt/homebrew/bin/bk param1=job param2=log ... terminal=true
+```
+
+It goes through [`bk`](https://buildkite.com/docs/platform/cli), the Buildkite
+CLI, the way github-actions goes through `gh`. `bk auth login --scopes read_only`
+signs in through the browser and keeps the token in the Keychain, and `bk api`
+prefixes every path with that organisation, so the plugin never handles either.
+Unlike GitHub, one call lists the builds of every pipeline.
+
+A pipeline that builds a GitHub repo is filed under its `owner/name` and
+commit, linking to both on GitHub. `repos`, `exclude`, `squares`, `listed` and
+`colors` in `~/.config/swiftbar-plugins/buildkite.json` work as they do for
+github-actions. A build blocked on a manual step after passing so far counts as
+passed, and one still running with a job already failed counts as failed.
 
 ---
 
