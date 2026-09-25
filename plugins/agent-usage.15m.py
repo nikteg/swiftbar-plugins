@@ -28,6 +28,11 @@ Configure
                            Rolling 30-day.
       kimi(), deepseek()   No configuration.
 
+    The circles' colours can be set in ~/.config/swiftbar-plugins/
+    agent-usage.json, outside the repo: a colour per level — normal, warning,
+    critical, activity, unknown — as "#rrggbb", an xterm-256 number, or a
+    name. {"colors": {"warning": "#ff9500"}}
+
 Credentials
     Read-only, from where each agent already stores them: the Claude Code
     Keychain entry, Codex and Kimi auth files, and the Pi auth file for
@@ -55,18 +60,30 @@ from agent_usage import (
 )
 from agent_usage.providers import ClaudeProfile
 from agent_usage.types import ProviderExtension
-from swiftbar_lib.ansi import COLORS, RESET, level_for
-from swiftbar_lib.components import MONOSPACE, Action, Meter
+from swiftbar_lib import config
+from swiftbar_lib.ansi import COLORS, RESET, level_for, palette
+from swiftbar_lib.components import Action, Indicator, Indicators, Meter, elbow
+from swiftbar_lib.data import object_at
 from swiftbar_lib.dates import MONTHS, WEEKDAYS, relative
 from swiftbar_lib.meters import compact_number
 from swiftbar_lib.output import escape_strict, show
-from swiftbar_lib.ui import Item, Node, Separator, Title
+from swiftbar_lib.ui import Item, Node, Separator
 
 HOME = os.environ.get("HOME", "")
 
+#: The circles' colour per level, overridable by ``colors`` in this plugin's
+#: config file.
+CIRCLE_COLORS = palette(
+    {
+        level: level
+        for level in ("normal", "warning", "critical", "activity", "unknown")
+    },
+    object_at(config.load(__file__), "colors"),
+)
 
-def _ansi(text: str, color: int | str, prefix: str = "") -> str:
-    return f"\x1b[{color}m{prefix}{escape_strict(text)}{RESET}"
+
+def _ansi(text: str, color: int | str) -> str:
+    return f"\x1b[{color}m{escape_strict(text)}{RESET}"
 
 
 def _format_reset(date: datetime | None) -> str:
@@ -106,17 +123,17 @@ def _budget_percent(
     return None if info is None else info.used_percent
 
 
-def _usage_color(usage: Usage) -> int:
+def _usage_level(usage: Usage) -> str:
     result, extension = usage.result, usage.provider
 
     # First: a provider that failed is not healthy, whatever else it reported.
     # DeepSeek returns local activity even on an HTTP error, and its budget
     # reads 0% when there has been no spend, which used to paint this green.
     if result.error:
-        return COLORS["critical"]
+        return "critical"
 
     if result.meters:
-        return COLORS[level_for(max(m.used_percent for m in result.meters))]
+        return level_for(max(m.used_percent for m in result.meters))
 
     local = [
         percent
@@ -125,29 +142,17 @@ def _usage_color(usage: Usage) -> int:
     ]
 
     if local:
-        return COLORS[level_for(max(local))]
+        return level_for(max(local))
 
     if any(a.total_tokens > 0 or a.calls > 0 for a in result.activity):
-        return COLORS["activity"]
+        return "activity"
 
-    return COLORS["unknown"]
-
-
-def Circles(*icons: str) -> Title:
-    """The menu bar: one coloured circle per provider."""
-    return Title(
-        *icons,
-        ansi=True,
-        symbolize=False,
-        font=MONOSPACE,
-        size=13,
-        dropdown=False,
-    )
+    return "unknown"
 
 
 def Icon(usage: Usage) -> str:
     """The menu bar circle, coloured by the worst quota this provider reports."""
-    return f"\x1b[{_usage_color(usage)}m●{RESET}"
+    return Indicator(CIRCLE_COLORS[_usage_level(usage)])
 
 
 def Activity(
@@ -170,7 +175,7 @@ def Activity(
         ]
     )
     local = Item(
-        _ansi(details + " · local activity", COLORS["unknown"], "  └ "),
+        elbow(_ansi(details + " · local activity", COLORS["unknown"])),
         ansi=True,
         font="Menlo",
     )
@@ -272,7 +277,7 @@ if __name__ == "__main__":
     )
 
     show(
-        Circles(
+        Indicators(
             Icon(claude_default), Icon(claude_personal), Icon(codex), Icon(deepseek)
         ),
         ProviderUsage(claude_default),

@@ -48,6 +48,21 @@ make enable PLUGIN=pollen.1h.py
 neither spelling, so running it after a `git pull` picks up anything new
 without switching your disabled ones back on. `make uninstall` removes both.
 
+### Personal settings
+
+Also not in this repo. What is specific to you — where you live, which repos
+you watch — goes in `~/.config/swiftbar-plugins/<name>.json`, and the plugin
+files keep only generic defaults. The name is the plugin's filename without its
+refresh interval, so `soltid.1h.py` reads `soltid.json`, and renaming it to
+change the interval keeps its settings:
+
+```json
+{ "latitude": 55.6, "longitude": 13.0, "skin_type": 3 }
+```
+
+A plugin missing a setting it has no default for says which one, and where, in
+its dropdown instead of guessing.
+
 ---
 
 ## [agent-usage.15m.py](plugins/agent-usage.15m.py)
@@ -86,7 +101,7 @@ claude_default, claude_personal, codex, deepseek = collect(
 )
 
 show(
-    Circles(Icon(claude_default), Icon(claude_personal), Icon(codex), Icon(deepseek)),
+    Indicators(Icon(claude_default), Icon(claude_personal), Icon(codex), Icon(deepseek)),
     ProviderUsage(claude_default),
     Separator(),
     ProviderUsage(claude_personal),
@@ -96,7 +111,9 @@ show(
 ```
 
 `collect` returns each provider paired with what it reported, so a component
-takes one value. Argument order is the order of the circles and of the
+takes one value. The circles' colours can be changed per level — `normal`,
+`warning`, `critical`, `activity`, `unknown` — with `colors` in
+`agent-usage.json`, the same way as for [github-actions](#github-actions1mpy). Argument order is the order of the circles and of the
 dropdown sections.
 
 Credentials are read where each agent already stores them — the Claude Code
@@ -161,6 +178,88 @@ dropdown rather than failing silently.
 
 ---
 
+## [github-actions.1m.py](plugins/github-actions.1m.py)
+
+The latest GitHub Actions runs across your repos: one square per run, newest
+first — orange while queued or running, green for success, red for a failure,
+grey when cancelled or skipped. Squares rather than circles, so they are not
+mistaken for agent-usage. The runs of one commit sit side by side, so the bar
+below is three pushes.
+
+The dropdown groups runs by repo and then by commit. Each commit is headed by a
+square and, in grey, its short hash, branch and title, linking to it. The
+square is the worst of each workflow's latest run on that commit — red if any
+failed, orange if any is still running — so a failure a later run has fixed
+stops counting.
+
+```
+■■ ■■ ■
+---
+acme/web-app | font=Menlo size=13 href=https://github.com/acme/web-app/actions
+■ 3f2c1ab · main · Add a retry to the upload client | ansi=true font=Menlo length=70 href=https://github.com/acme/web-app/commit/3f2c1ab...
+  └ ■ Code scanning · 10m ago | href=https://github.com/acme/web-app/actions/runs/1002 ansi=true font=Menlo length=70
+  └ ■ CI · running 13m | href=https://github.com/acme/web-app/actions/runs/1001 ansi=true font=Menlo length=70
+--#70 · push by octocat | font=Menlo
+--In progress for 13m | font=Menlo
+-----
+--Open run | href=https://github.com/acme/web-app/actions/runs/1001
+--Open workflow | href=https://github.com/acme/web-app/actions/workflows/ci.yml
+■ 9e41d07 · main · Drop the unused settings page | ansi=true font=Menlo length=70 href=...
+...
+---
+Refresh | refresh=true
+```
+
+GitHub has no endpoint that lists runs across repos, so it takes two steps
+through `gh api`: `user/repos?sort=pushed` finds the ten repos you can access
+with the most recent pushes, then each one's `actions/runs` is fetched in
+parallel. The five newest get a square and the fifteen newest are listed. Runs
+are grouped by commit hash rather than by start time, which would split one
+push across a window boundary. A repo that errors (SSO not authorised, say) is
+listed with the error rather than hiding the rest.
+
+Which repos you watch is personal, so it is configured outside the repo, in
+`~/.config/swiftbar-plugins/github-actions.json`. Every key is optional:
+
+```json
+{
+  "exclude": ["acme/legacy-app"],
+  "actor": "@me"
+}
+```
+
+`repos` watches a fixed list instead of discovering, `exclude` leaves repos out
+by `owner/name`, `actor` shows only one person's runs (`@me` for yours), and
+`squares`, `listed` and `discover` change the counts. `colors` sets the square
+for each state — `running`, `success`, `failure`, `other` — as `"#rrggbb"`, an
+xterm-256 number or a name such as `"warning"`:
+
+```json
+{ "colors": { "running": "#ff9500" } }
+```
+
+SwiftBar reads 256-colour codes but not 24-bit ones, so a hex colour is matched
+to the nearest of the 256.
+
+A failed run shows why, without opening a browser:
+
+```
+--✗ test › Run tests | ansi=true font=Menlo href=https://github.com/acme/web-app/actions/runs/1003/job/2001
+--│ ✖ 1 test failed | font=Menlo size=11 length=100
+--│ expected 2 to equal 3 | font=Menlo size=11 length=100
+--│ Process completed with exit code 1. | font=Menlo size=11 length=100
+--Show failed log in Terminal | bash=/opt/homebrew/bin/gh param1=run param2=view ... terminal=true
+```
+
+The lines are the last ten before the job log's first `##[error]`, with the
+folded groups left out as GitHub's own log view does. They come from the log
+rather than from check-run annotations because a fine-grained token often
+cannot read annotations. A finished run's log never changes, so each failed run
+attempt is read once and kept in `failures.json` in the plugin's cache
+directory.
+
+---
+
 ## [pollen.1h.py](plugins/pollen.1h.py)
 
 Pollen levels for a Swedish city, as a percentage of the 7-point scale.
@@ -175,10 +274,13 @@ Björk 0%
 ...
 ```
 
-Every pollen is one line, so reordering, renaming or dropping one is a line:
+The city is `city` in [`pollen.json`](#personal-settings), in Pollenkoll's
+spelling. Every pollen is one line, so reordering, renaming or dropping one is
+a line:
 
 ```python
-today = levels("Göteborg")
+city = string_at(config.load(__file__), "city")
+today = levels(city) if city else defaultdict(lambda: UNKNOWN)
 
 show(
     Title(f"🌿 Björk {today['bjork']}"),
@@ -202,14 +304,16 @@ the day is safe.
 ```
 ☀️ ✅
 ---
-Så många timmar och minuter kan du vistas ute i/på Sverige (Göteborg)
+Så många timmar och minuter kan du vistas ute i/på Sverige (Malmö)
 Resten av dagen i direkt solljus
 Resten av dagen i lite skugga
 Resten av dagen i mycket skugga
 ```
 
-`forecast(latitude=57.71, longitude=11.0, skin_type=2)` — `skin_type` is the
-Fitzpatrick scale 1-6, as on the agency's own form.
+`latitude`, `longitude` and `skin_type` go in
+[`soltid.json`](#personal-settings). `skin_type` is the Fitzpatrick scale 1-6,
+as on the agency's own form, and defaults to 1, the end that burns fastest, so
+an unset one errs on the side of shorter times.
 
 ---
 
@@ -220,11 +324,11 @@ This evening's golden hour.
 ```
 🌇 18:28 - 19:18 🌇
 ---
-Göteborg, Sweden | href=https://meteogram.org/sun/sweden/goteborg/
+Malmö, Sweden | href=https://meteogram.org/sun/sweden/malmo/
 ```
 
-`evening(country="sweden", city="goteborg")` — the path segments of a
-meteogram.org sun page. Scraped with stdlib `html.parser`, since the site has
+`city` and `country` from [`goldenhour.json`](#personal-settings), lowercased
+and unaccented into the path of a meteogram.org sun page. Scraped with stdlib `html.parser`, since the site has
 no API; a redesign of that page is what will break this one.
 
 ---
@@ -310,16 +414,17 @@ kubecontext, `ProviderUsage` in agent-usage.
 | Module | For |
 | --- | --- |
 | `ui` | The node types: `Title`, `Item`, `Separator`, `Refresh` |
-| `components` | Rows that recur: `Meter`, `Action`, `Link` |
+| `components` | Rows that recur: `Indicators`, `Meter`, `Action`, `Link`, `elbow` |
 | `output` | Rendering a node tree to SwiftBar's line format, and the escaping |
 | `errors` | `clean_error`, for a failure a plugin renders as a row |
 | `http` | JSON/text with timeouts, parallel fetches, graceful failures |
 | `data` | Reading untyped JSON without trusting its shape |
+| `config` | Per-person settings in `~/.config/swiftbar-plugins/<name>.json`, outside the repo |
 | `state` | Small JSON state files, written atomically, optionally owner-only |
 | `jsonl_cache` | Reading append-only logs incrementally across runs |
 | `shell` | Finding and running binaries despite SwiftBar's minimal `PATH` |
 | `notify` | macOS notifications, with AppleScript quoting handled |
-| `ansi` | Semantic colours for menu rows |
+| `ansi` | Colours for menu rows: semantic names, xterm-256 and hex, and `palette` for config overrides |
 | `meters` | Progress bars and compact number formatting |
 | `dates` | Parsing the timestamp shapes APIs return |
 

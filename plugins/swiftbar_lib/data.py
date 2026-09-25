@@ -24,6 +24,16 @@ def string_at(value: Any, key: str) -> str | None:
     return child if isinstance(child, str) and child else None
 
 
+def strings_at(value: Any, key: str) -> list[str]:
+    """The non-empty strings in the list at ``key``; anything else is dropped."""
+    child = value.get(key) if isinstance(value, dict) else None
+
+    if not isinstance(child, list):
+        return []
+
+    return [item for item in child if isinstance(item, str) and item]
+
+
 def is_finite(value: float) -> bool:
     return value == value and value not in (float("inf"), float("-inf"))
 

@@ -6,9 +6,18 @@ developers.openai.com and asserted on whatever the price list said that day —
 so the suite passed or failed depending on the network and the calendar.
 """
 
+import tempfile
+from pathlib import Path
+
 import pytest
 
 from agent_usage.pricing import codex, openai
+from swiftbar_lib import config
+
+#: Plugins read personal settings from ~/.config when they are imported, which
+#: happens as test modules load, before any fixture runs. Pointing the config
+#: directory at an empty one here keeps your own settings out of the suite.
+config.CONFIG_DIR = Path(tempfile.mkdtemp(prefix="swiftbar-config-"))
 
 #: A frozen snapshot, in the format the real parser consumes, so these tests
 #: exercise the parser too. The figures are OpenAI's published prices as of

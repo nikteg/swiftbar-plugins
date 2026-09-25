@@ -15,12 +15,12 @@ from agent_usage.types import (
 from builtins_fixture import EXTENSIONS
 from builtins_fixture import LOCAL_ACTIVITY_BUDGETS as BUDGETS
 from plugin_loader import load
-from swiftbar_lib.components import Action
+from swiftbar_lib.components import Action, Indicators
 from swiftbar_lib.output import render
 from swiftbar_lib.ui import Separator
 
 plugin = load("agent-usage.15m.py")
-Circles, Icon, ProviderUsage = plugin.Circles, plugin.Icon, plugin.ProviderUsage
+Icon, ProviderUsage = plugin.Icon, plugin.ProviderUsage
 
 
 def pair(result, providers):
@@ -41,7 +41,7 @@ def show(results, extensions=None, plugin_path="/plugin/agent-usage.15m.py"):
 
     return render(
         [
-            Circles(*(Icon(usage) for usage in paired)),
+            Indicators(*(Icon(usage) for usage in paired)),
             [[ProviderUsage(usage), Separator()] for usage in paired],
             Action("Clear local usage caches", plugin_path, "--clear-cache"),
         ]
@@ -166,7 +166,7 @@ class ActivityTest(unittest.TestCase):
             ]
         )
         self.assertIn(
-            "\x1b[90m  └ 1K processed tokens · 200 uncached tokens · 3 calls"
+            "\x1b[90m  └\x1b[0m \x1b[90m1K processed tokens · 200 uncached tokens · 3 calls"
             " · 1 credits ≈ $0.04 · local activity",
             output,
         )

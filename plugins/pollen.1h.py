@@ -16,9 +16,12 @@ Shows
     Dropdown: every pollen reported for the city, worst first.
 
 Configure
-    Edit the menu at the bottom of this file. Every pollen is one row, so
-    reordering, renaming or dropping one is a line. The city must match
-    Pollenkoll's spelling, e.g. "Göteborg".
+    The city is ``city`` in ~/.config/swiftbar-plugins/pollen.json, outside
+    the repo. It must match Pollenkoll's spelling, e.g. {"city": "Malmö"}.
+    Until it is set the dropdown says so above rows of —, and nothing is
+    fetched.
+    Which pollens show is the menu at the bottom of this file. Every pollen
+    is one row, so reordering, renaming or dropping one is a line.
 
 Source
     pollenkoll.se's WordPress JSON API, the same endpoint their Android app
@@ -33,6 +36,9 @@ import urllib.parse
 from collections import defaultdict
 from datetime import date
 
+from swiftbar_lib import config
+from swiftbar_lib.components import Unconfigured
+from swiftbar_lib.data import string_at
 from swiftbar_lib.http import get_json
 from swiftbar_lib.output import show
 from swiftbar_lib.ui import Item, Title
@@ -68,10 +74,12 @@ def levels(city: str) -> dict[str, str]:
 
 
 if __name__ == "__main__":
-    today = levels("Göteborg")
+    city = string_at(config.load(__file__), "city")
+    today = levels(city) if city else defaultdict(lambda: UNKNOWN)
 
     show(
         Title(f"🌿 Björk {today['bjork']}"),
+        Unconfigured(__file__, "city") if not city else None,
         Item(f"Al {today['al']}"),
         Item(f"Alm {today['alm']}"),
         Item(f"Ambrosia {today['ambrosia']}"),

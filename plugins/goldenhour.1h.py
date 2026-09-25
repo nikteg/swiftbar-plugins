@@ -14,9 +14,11 @@ Shows
     Dropdown: the resolved location, linking to the source page.
 
 Configure
-    Edit the call at the bottom of this file.
-      country, city  Path segments of a meteogram.org sun page, lowercase and
-                     unaccented, as in meteogram.org/sun/sweden/goteborg/.
+    city and country in ~/.config/swiftbar-plugins/goldenhour.json, outside
+    the repo. They become the path of a meteogram.org sun page, lowercased and
+    unaccented, so {"city": "Malmö", "country": "Sweden"} reads
+    meteogram.org/sun/sweden/malmo/. Until both are set the dropdown says so
+    and nothing is fetched.
 
 Source
     Scraped from meteogram.org, which publishes no API. The parser reads the
@@ -27,10 +29,13 @@ Refresh
     Hourly, from the ``1h`` in this file's name. Rename to change it.
 """
 
+import unicodedata
 from dataclasses import dataclass
 from html.parser import HTMLParser
 
-from swiftbar_lib.components import Link
+from swiftbar_lib import config
+from swiftbar_lib.components import Link, Unconfigured
+from swiftbar_lib.data import string_at
 from swiftbar_lib.http import get_text
 from swiftbar_lib.output import show
 from swiftbar_lib.ui import Title
@@ -86,6 +91,13 @@ class Scraper(HTMLParser):
             self.times += data
 
 
+def slug(name: str) -> str:
+    """A place name as meteogram.org spells it in a path: "Malmö" -> "malmo"."""
+    unaccented = unicodedata.normalize("NFKD", name).encode("ascii", "ignore")
+
+    return "-".join(unaccented.decode().lower().split())
+
+
 def evening(country: str, city: str) -> Evening:
     """Tonight's golden hour. ``times`` is empty when the page has no cell."""
     url = f"{BASE_URL}/{country}/{city}/"
@@ -100,11 +112,18 @@ def evening(country: str, city: str) -> Evening:
 
 
 if __name__ == "__main__":
-    tonight = evening(country="sweden", city="goteborg")
+    settings = config.load(__file__)
+    city, country = string_at(settings, "city"), string_at(settings, "country")
+
+    tonight = evening(slug(country), slug(city)) if city and country else None
 
     show(
-        Title(f"🌇 {tonight.times} 🌇") if tonight.times else Title("🌇 —"),
-        Link(tonight.location, tonight.url)
-        if tonight.times
-        else Link("No golden hour found on the page", tonight.url),
+        Title(f"🌇 {tonight.times} 🌇") if tonight and tonight.times else Title("🌇 —"),
+        (
+            Link(tonight.location, tonight.url)
+            if tonight.times
+            else Link("No golden hour found on the page", tonight.url)
+        )
+        if tonight
+        else Unconfigured(__file__, "city", "country"),
     )
