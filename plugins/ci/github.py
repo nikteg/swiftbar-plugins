@@ -205,8 +205,14 @@ def failed_jobs(gh: str, run: Run) -> list[FailedJob]:
                 "",
             ),
             url=string_at(job, "html_url") or run.url,
+            # gh refuses to print a log's colour codes unless told to;
+            # log_tail strips them, and the menu escapes what is left.
             log=log_tail(
-                gh_api(gh, f"repos/{run.repo}/actions/jobs/{job.get('id')}/logs")
+                gh_api(
+                    gh,
+                    f"repos/{run.repo}/actions/jobs/{job.get('id')}/logs",
+                    "--allow-escape-sequences",
+                )
             ),
         )
         for job in failed[:MAX_FAILED_JOBS]

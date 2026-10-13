@@ -77,7 +77,10 @@ def JobFailure(job: FailedJob) -> Node:
         ),
         # The gutter also stops a log line starting with -- from reading as a
         # deeper submenu level.
-        [Item(f"│ {line}", font=MONOSPACE, size=11, length=100) for line in job.log],
+        [
+            Item(f"│ {escape_strict(line)}", font=MONOSPACE, size=11, length=100)
+            for line in job.log
+        ],
     ]
 
 
