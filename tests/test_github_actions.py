@@ -436,7 +436,7 @@ class DiagnoseTest(unittest.TestCase):
         }
 
         def gh_api(gh, path, *flags):
-            calls.append(path)
+            calls.append((path, *flags))
 
             return json.dumps(jobs) if path.endswith("/jobs") else LOG
 
@@ -445,7 +445,11 @@ class DiagnoseTest(unittest.TestCase):
             second = diagnose("github-actions", [failed], read)
 
         self.assertEqual(
-            calls, ["repos/o/r/actions/runs/9/jobs", "repos/o/r/actions/jobs/2/logs"]
+            calls,
+            [
+                ("repos/o/r/actions/runs/9/jobs",),
+                ("repos/o/r/actions/jobs/2/logs", "--allow-escape-sequences"),
+            ],
         )
         self.assertEqual(first, second)
         (job,) = first["9"]
