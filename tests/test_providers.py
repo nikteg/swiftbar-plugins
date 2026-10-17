@@ -25,6 +25,7 @@ from agent_usage.providers.kimi import (
     parse_kimi_usage,
 )
 from agent_usage.sources.claude import parse_claude_usage_event
+from agent_usage.sources.opencode import parse_opencode_usage_event
 from agent_usage.sources.pi import parse_pi_usage_event
 from agent_usage.types import LocalUsageEvent
 from agent_usage.usage import accumulate_rolling_usage, empty_rolling_local_usage
@@ -457,27 +458,70 @@ class DeepSeekTest(unittest.TestCase):
             parse_deepseek_balance({"balance_infos": [{"currency": "USD"}]}), []
         )
 
-    def test_parses_pi_token_events(self):
+    def test_parses_opencode_token_events(self):
         event = parse_deepseek_token_event(
             {
-                "timestamp": "2030-01-01T00:00:00Z",
-                "type": "message",
-                "message": {
-                    "role": "assistant",
-                    "provider": "deepseek",
-                    "usage": {
-                        "input": 66,
-                        "output": 93,
-                        "cacheRead": 293_504,
-                        "cacheWrite": 0,
-                        "totalTokens": 293_663,
-                        "cost": {"total": 0.001173572},
-                    },
+                "role": "assistant",
+                "providerID": "deepseek",
+                "modelID": "deepseek-v4-pro",
+                "cost": 0.012007556,
+                "tokens": {
+                    "total": 481_049,
+                    "input": 287,
+                    "output": 408,
+                    "reasoning": 226,
+                    "cache": {"write": 0, "read": 480_128},
                 },
+                "time": {"created": EPOCH_2030},
             }
         )
-        self.assertEqual((event.total_tokens, event.uncached_tokens), (293_663, 159))
-        self.assertAlmostEqual(event.cost, 0.001173572)
+        self.assertEqual((event.total_tokens, event.uncached_tokens), (481_049, 921))
+        self.assertAlmostEqual(event.cost, 0.012007556)
+
+    def test_ignores_other_opencode_providers(self):
+        self.assertIsNone(
+            parse_deepseek_token_event(
+                {
+                    "providerID": "unsloth",
+                    "tokens": {"input": 1, "output": 1},
+                    "time": {"created": EPOCH_2030},
+                }
+            )
+        )
+
+
+class OpenCodeSourceTest(unittest.TestCase):
+    def test_parses_session_message_payloads(self):
+        event = parse_opencode_usage_event(
+            {
+                "model": {"providerID": "deepseek", "id": "deepseek-v4-flash"},
+                "cost": 0.5,
+                "tokens": {
+                    "input": 19,
+                    "output": 569,
+                    "reasoning": 2,
+                    "cache": {"read": 100, "write": 10},
+                },
+            },
+            EPOCH_2030,
+        )
+        self.assertEqual(
+            (
+                event.timestamp,
+                event.provider,
+                event.model,
+                event.total_tokens,
+                event.cost,
+            ),
+            (EPOCH_2030, "deepseek", "deepseek-v4-flash", 700, 0.5),
+        )
+
+    def test_ignores_user_messages(self):
+        self.assertIsNone(
+            parse_opencode_usage_event(
+                {"role": "user", "time": {"created": EPOCH_2030}}, EPOCH_2030
+            )
+        )
 
 
 class PiSourceTest(unittest.TestCase):

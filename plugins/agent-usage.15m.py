@@ -38,8 +38,11 @@ Configure
 
 Credentials
     Read-only, from where each agent already stores them: the Claude Code
-    Keychain entry, Codex and Kimi auth files, and the Pi auth file for
-    DeepSeek. Nothing is written back except a refreshed OAuth token.
+    Keychain entry and the Codex and Kimi auth files. DeepSeek's API key is the
+    Keychain item deepseek-api-key, added with
+    security add-generic-password -s deepseek-api-key -a "$USER" -w
+    and its local activity comes from OpenCode's database. Nothing is written
+    back except a refreshed OAuth token.
 
 Implementation
     agent_usage/ collects the data and contains no menu code; every

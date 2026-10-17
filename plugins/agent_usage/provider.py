@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import subprocess
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Any
@@ -95,6 +96,32 @@ class JsonFileSecret:
             value = object_at(value, key)
 
         return string_at(value, self.keys[-1]) if self.keys else None
+
+
+@dataclass
+class KeychainSecret:
+    """A generic password from the login Keychain, read via `security`."""
+
+    service: str
+    account: str | None = None
+
+    def resolve(self) -> str | None:
+        command = ["/usr/bin/security", "find-generic-password", "-s", self.service]
+
+        if self.account:
+            command += ["-a", self.account]
+
+        try:
+            completed = subprocess.run(
+                [*command, "-w"], capture_output=True, timeout=10
+            )
+        except (OSError, subprocess.SubprocessError):
+            return None
+
+        if completed.returncode != 0:
+            return None
+
+        return completed.stdout.decode().strip() or None
 
 
 @dataclass
