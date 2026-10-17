@@ -119,8 +119,11 @@ takes one value. The squircles' colours can be changed per level — `normal`,
 Argument order is the order of the squircles and of the dropdown sections.
 
 Credentials are read where each agent already stores them — the Claude Code
-Keychain entry, the Codex and Kimi auth files, the Pi auth file for DeepSeek —
-and nothing is written back except a refreshed OAuth token. OpenAI prices are
+Keychain entry, the Codex and Kimi auth files — and nothing is written back
+except a refreshed OAuth token. DeepSeek's API key is read from the Keychain item
+`deepseek-api-key` (`security add-generic-password -s deepseek-api-key -a "$USER"
+-w` prompts for it), and its local activity comes from OpenCode's database at
+`~/.local/share/opencode/opencode.db`. OpenAI prices are
 fetched on demand and cached for a month, falling back to a stale cache and
 then to no cost estimates. `agent_usage/` is a package because a provider
 registry, a pricing catalogue and a transcript cache do not fit in one file.

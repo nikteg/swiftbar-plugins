@@ -1,13 +1,16 @@
-"""DeepSeek API balance, plus local cost from Pi sessions."""
+"""DeepSeek API balance, plus local cost from OpenCode sessions."""
 
 from __future__ import annotations
 
-import os
 from typing import Any
 
-from ..config import HOME, MENU_COLORS
-from ..provider import JsonFileSecret, api_key_auth, define_provider, http_json_quota
-from ..sources.pi import PiUsageEvent, collect_pi_usage_events, parse_pi_usage_event
+from ..config import MENU_COLORS
+from ..provider import KeychainSecret, api_key_auth, define_provider, http_json_quota
+from ..sources.opencode import (
+    OpenCodeUsageEvent,
+    collect_opencode_usage_events,
+    parse_opencode_usage_event,
+)
 from ..types import (
     ActivityExtension,
     ActivityWindow,
@@ -27,6 +30,7 @@ from ..utils import now_ms, string_at
 
 BALANCE_URL = "https://api.deepseek.com/user/balance"
 DASHBOARD = "https://platform.deepseek.com/usage"
+KEYCHAIN_SERVICE = "deepseek-api-key"
 
 DEEPSEEK_ACTIVITY_BUDGET = {"five_hour_cost_usd": 1, "weekly_cost_usd": 5}
 
@@ -99,18 +103,20 @@ def _parse_balance(body: dict, _headers) -> ProviderResult:
     )
 
 
-def create_deepseek_extension() -> ProviderExtension:
+def create_deepseek_extension(secret: Any = None) -> ProviderExtension:
+    """`secret` is any provider secret source; defaults to the login Keychain."""
     return define_provider(
         id="deepseek",
         name="DeepSeek",
         account_type="api",
         auth=api_key_auth(
-            source=JsonFileSecret(
-                path=os.path.join(HOME, ".pi", "agent", "auth.json"),
-                keys=["deepseek", "key"],
-            ),
+            source=secret or KeychainSecret(KEYCHAIN_SERVICE),
             scheme="Bearer",
-            missing_message="No API key in Pi auth",
+            missing_message=(
+                "No API key configured"
+                if secret
+                else f"No API key in Keychain item {KEYCHAIN_SERVICE}"
+            ),
         ),
         quota=http_json_quota(
             type="activity",
@@ -124,23 +130,19 @@ def create_deepseek_extension() -> ProviderExtension:
 
 
 def parse_deepseek_token_event(value: Any) -> LocalUsageEvent | None:
-    event = parse_pi_usage_event(value)
+    event = parse_opencode_usage_event(value)
 
-    return _event_from_pi(event) if event else None
+    return _event_from_opencode(event) if event else None
 
 
-def _event_from_pi(event: PiUsageEvent) -> LocalUsageEvent | None:
+def _event_from_opencode(event: OpenCodeUsageEvent) -> LocalUsageEvent | None:
     if event.provider != "deepseek":
         return None
-
-    uncached = max(0.0, event.total_tokens - event.cache_read_tokens) or (
-        event.input_tokens + event.output_tokens + event.cache_write_tokens
-    )
 
     return LocalUsageEvent(
         timestamp=event.timestamp,
         total_tokens=event.total_tokens,
-        uncached_tokens=uncached,
+        uncached_tokens=max(0.0, event.total_tokens - event.cache_read_tokens),
         cost=event.cost,
     )
 
@@ -149,8 +151,8 @@ def _collect_local_usage() -> RollingLocalUsage:
     usage = empty_rolling_local_usage(cost=True)
     now = now_ms()
 
-    for pi_event in collect_pi_usage_events():
-        event = _event_from_pi(pi_event)
+    for opencode_event in collect_opencode_usage_events():
+        event = _event_from_opencode(opencode_event)
 
         if event:
             accumulate_rolling_usage(usage, event, now)
