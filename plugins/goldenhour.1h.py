@@ -118,7 +118,7 @@ if __name__ == "__main__":
     tonight = evening(slug(country), slug(city)) if city and country else None
 
     show(
-        Title(f"🌇 {tonight.times} 🌇") if tonight and tonight.times else Title("🌇 —"),
+        Title(f"{tonight.times}") if tonight and tonight.times else Title("🌇 —"),
         (
             Link(tonight.location, tonight.url)
             if tonight.times
