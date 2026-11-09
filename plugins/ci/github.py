@@ -22,6 +22,14 @@ from .runs import ANSI_CODE, LOG_LINES, MAX_FAILED_JOBS, FailedJob, Latest, Run,
 ACTIVE = {"queued", "in_progress", "waiting", "requested", "pending"}
 FAILED = {"failure", "timed_out", "startup_failure"}
 
+#: Runs fetched per commit wanted. A commit usually has a few workflows, and a
+#: scheduled one can run many times on the same commit, so ``limit`` runs
+#: would cover only a commit or two of a repo with a frequent cron.
+RUNS_PER_COMMIT = 5
+
+#: The most runs GitHub returns in one page.
+MAX_PAGE = 100
+
 _TIMESTAMP = re.compile(r"^\d{4}-\d\d-\d\dT[\d:.]+Z ?")
 
 
@@ -120,9 +128,9 @@ def latest(
     limit: int,
     actor: str | None,
 ) -> Latest:
-    """The latest ``limit`` runs of each watched repo, newest first overall.
+    """Enough runs of each watched repo for ``limit`` commits, newest first.
 
-    Not cut to ``limit`` in total: the menu counts commits, and a cut here
+    Not cut to ``limit`` commits: the menu counts them itself, and a cut here
     could split one.
     """
     try:
@@ -146,7 +154,7 @@ def latest(
 
     def fetch(repo: str) -> list[Run] | str:
         try:
-            return repo_runs(gh, repo, limit, actor)
+            return repo_runs(gh, repo, min(MAX_PAGE, limit * RUNS_PER_COMMIT), actor)
         except (RuntimeError, TimeoutError, ValueError) as error:
             return f"{repo}: {clean_error(error)}"
 

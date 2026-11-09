@@ -156,14 +156,14 @@ class LatestTest(unittest.TestCase):
             return "o/a\no/skip\no/b\n" if path.startswith("user/repos") else empty
 
         with mock.patch.object(github, "gh_api", gh_api):
-            github.latest(GH, [], discover=2, exclude=["o/skip"], limit=5, actor=None)
+            github.latest(GH, [], discover=2, exclude=["o/skip"], limit=30, actor=None)
 
         self.assertEqual(requested[0], "user/repos?sort=pushed&per_page=3")
         self.assertEqual(
             sorted(requested[1:]),
             [
-                "repos/o/a/actions/runs?per_page=5&exclude_pull_requests=true",
-                "repos/o/b/actions/runs?per_page=5&exclude_pull_requests=true",
+                "repos/o/a/actions/runs?per_page=100&exclude_pull_requests=true",
+                "repos/o/b/actions/runs?per_page=100&exclude_pull_requests=true",
             ],
         )
 
