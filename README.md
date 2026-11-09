@@ -185,7 +185,8 @@ dropdown rather than failing silently.
 
 ## [github-actions.1m.py](plugins/github-actions.1m.py)
 
-The latest GitHub Actions runs across your repos: one squircle per run, newest
+The latest GitHub Actions runs across your repos: one squircle per workflow run
+on a commit, newest
 first — amber while queued or running, green for success, red for a failure,
 grey when cancelled or skipped. The runs of one commit sit side by side with a
 thin line between commits, so the bar below (■ standing for a squircle in the
@@ -244,7 +245,10 @@ with the most recent pushes, then each one's `actions/runs` is fetched in
 parallel. The three newest commits get squircles in the menu bar and the ten
 newest are listed, each with every one of its runs. Runs
 are grouped by commit hash rather than by start time, which would split one
-push across a window boundary. A repo that errors (SSO not authorised, say) is
+push across a window boundary. A scheduled workflow runs on whatever the
+branch's head is, so it can run many times on one commit; only its latest run
+gets a squircle and a row, and the earlier ones sit in that row's "Earlier
+runs" submenu. A repo that errors (SSO not authorised, say) is
 listed with the error rather than hiding the rest.
 
 Which repos you watch is personal, so it is configured outside the repo, in

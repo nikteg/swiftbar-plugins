@@ -16,7 +16,16 @@ from swiftbar_lib.components import MONOSPACE, Action, Link, Squircles, squircle
 from swiftbar_lib.output import escape_strict
 from swiftbar_lib.ui import Item, Node, Separator
 
-from .runs import Diagnosis, FailedJob, Run, duration, first_commits, grouped, overall
+from .runs import (
+    Diagnosis,
+    FailedJob,
+    Run,
+    by_workflow,
+    duration,
+    first_commits,
+    grouped,
+    overall,
+)
 
 
 @dataclass(frozen=True)
@@ -31,15 +40,19 @@ class View:
 
 
 def Squares(runs: list[Run], colors: dict[str, str | int], count: int) -> Node:
-    """The menu bar: the ``count`` newest commits, a squircle for each run on one.
+    """The menu bar: the ``count`` newest commits, a squircle per workflow on one.
 
-    The runs of a commit sit together with a line between commits, and a
-    commit is never cut short.
+    Each squircle is that workflow's latest run on the commit, so a scheduled
+    one that ran many times on it still takes one. The squircles of a commit
+    sit together with a line between commits, and a commit is never cut short.
     """
     commits = grouped(first_commits(runs, count), lambda run: run.commit).values()
 
     return Squircles(
-        [[colors[run.state] for run in commit] for commit in commits]
+        [
+            [colors[workflow[0].state] for workflow in by_workflow(commit)]
+            for commit in commits
+        ]
         or [[colors["other"]]]
     )
 
@@ -91,17 +104,46 @@ def Failure(diagnosis: Diagnosis | None) -> Node:
     return [JobFailure(job) for job in diagnosis or []]
 
 
-def WorkflowRun(run: Run, view: View) -> Node:
-    """One run, with its details and links in a submenu."""
-    when = (
-        f"running {duration(run.elapsed(view.now))}"
-        if run.finished_at is None
-        else f"{duration((view.now - run.finished_at).total_seconds())} ago"
-    )
+def when(run: Run, now: datetime) -> str:
+    if run.finished_at is None:
+        return f"running {duration(run.elapsed(now))}"
 
+    return f"{duration((now - run.finished_at).total_seconds())} ago"
+
+
+def EarlierRuns(runs: list[Run], view: View) -> Node:
+    """The runs of a workflow on a commit before its latest, one row each."""
+    if not runs:
+        return None
+
+    return [
+        Separator(),
+        Item(
+            f"Earlier runs ({len(runs)})",
+            [
+                Item(
+                    f"#{run.number} – {run.event} – {Outcome(run, view.now)}"
+                    f" – {when(run, view.now)}",
+                    href=run.url,
+                    image=squircle(view.colors[run.state]),
+                    font=MONOSPACE,
+                )
+                for run in runs
+            ],
+            font=MONOSPACE,
+        ),
+    ]
+
+
+def WorkflowRun(run: Run, view: View, earlier: list[Run] | None = None) -> Node:
+    """One run, with its details and links in a submenu.
+
+    ``earlier`` are the same workflow's previous runs on the commit, such as a
+    scheduled one's, listed in a submenu of their own at the end.
+    """
     return Item(
         f"{escape_strict(run.workflow)} "
-        + colorize(f"#{run.number} · {when}", "muted"),
+        + colorize(f"#{run.number} · {when(run, view.now)}", "muted"),
         Item(f"{run.event} by {run.actor}", font=MONOSPACE),
         Item(Outcome(run, view.now), font=MONOSPACE),
         Failure(view.diagnoses.get(run.id)),
@@ -116,6 +158,7 @@ def WorkflowRun(run: Run, view: View) -> Node:
         )
         if run.state == "failure" and run.log_command
         else None,
+        EarlierRuns(earlier or [], view),
         ansi=True,
         href=run.url,
         image=squircle(view.colors[run.state]),
@@ -218,7 +261,10 @@ def Commit(runs: list[Run], view: View) -> Node:
             length=70,
             href=head.commit_url,
         ),
-        [WorkflowRun(run, view) for run in runs],
+        [
+            WorkflowRun(workflow[0], view, workflow[1:])
+            for workflow in by_workflow(runs)
+        ],
     ]
 
 

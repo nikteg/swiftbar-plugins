@@ -113,10 +113,18 @@ def grouped[K](runs: list[Run], key: Callable[[Run], K]) -> dict[K, list[Run]]:
     return groups
 
 
+def by_workflow(runs: list[Run]) -> list[list[Run]]:
+    """A commit's runs per workflow, each group's latest run first.
+
+    A scheduled workflow runs on whatever the branch's head is, so it can run
+    many times on one commit; only its latest says how the commit stands.
+    """
+    return list(grouped(runs, lambda run: run.workflow_key or run.workflow).values())
+
+
 def overall(runs: list[Run]) -> str:
     """The state of a group of runs: the worst of each workflow's latest."""
-    latest = grouped(runs, lambda run: run.workflow_key or run.workflow)
-    states = {workflow_runs[0].state for workflow_runs in latest.values()}
+    states = {workflow_runs[0].state for workflow_runs in by_workflow(runs)}
 
     return next(
         (state for state in ("failure", "running", "success") if state in states),

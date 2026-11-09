@@ -10,10 +10,10 @@
 """The latest GitHub Actions runs across your repos.
 
 Shows
-    Menu bar: the newest few commits, newest first, a squircle for each run
-    on one, a thin line between commits — orange while it is queued or running, green
-    when it succeeded, red when it failed, grey when it was cancelled or
-    skipped.
+    Menu bar: the newest few commits, newest first, a squircle for each
+    workflow's latest run on one, a thin line between commits — orange while
+    it is queued or running, green when it succeeded, red when it failed,
+    grey when it was cancelled or skipped.
     Dropdown: the same groups in the same order, then the rest in a "more
     commits" submenu: one per commit, newest first across repos, a separator
     where the bar has its line. Each commit is headed by a squircle, the worst
@@ -21,7 +21,9 @@ Shows
     and message's first line; its submenu has the full hash, author, commit
     time, the whole message, and a row copying the hash. Each run's row has
     its workflow and run number; its submenu has the trigger and duration, and
-    links to the run and to its workflow's page. A failed run also names each
+    links to the run and to its workflow's page. A workflow that ran more
+    than once on the commit, as a scheduled one does, shows its latest run,
+    the earlier ones in an "Earlier runs" submenu. A failed run also names each
     failed job and step, shows the last lines of its log before the error, and
     offers to open the full failed log in Terminal.
 
@@ -29,8 +31,8 @@ Configure
     In ~/.config/swiftbar-plugins/github-actions.json, outside the repo, so
     which repos you watch is never committed. Every key is optional; the
     defaults are at the bottom of this file.
-      squares   How many commits get squares in the menu bar, one per run
-                on each. Default 3.
+      squares   How many commits get squares in the menu bar, one per
+                workflow on each. Default 3.
       listed    How many commits the dropdown lists, each with all its
                 runs. Default 10.
       repos     ``owner/name`` repos to watch. Empty means the ``discover``

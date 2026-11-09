@@ -194,7 +194,12 @@ class RenderTest(unittest.TestCase):
     def test_draws_a_square_per_run_with_a_commits_runs_side_by_side(self):
         runs = [
             run(run_id=1, created="2026-09-25T11:50:00Z", status="in_progress"),
-            run(run_id=2, created="2026-09-25T11:45:00Z", head_sha="sha1"),
+            run(
+                run_id=2,
+                created="2026-09-25T11:45:00Z",
+                head_sha="sha1",
+                path=".github/workflows/scan.yml",
+            ),
             run(run_id=3, created="2026-09-25T11:40:00Z", conclusion="failure"),
         ]
         title = Squares(runs, DEFAULT_COLORS, 5)
@@ -208,9 +213,19 @@ class RenderTest(unittest.TestCase):
     def test_counts_commits_not_runs_and_never_cuts_one_short(self):
         runs = [
             run(run_id=1, created="2026-09-25T11:50:00Z", head_sha="a"),
-            run(run_id=2, created="2026-09-25T11:49:00Z", head_sha="a"),
+            run(
+                run_id=2,
+                created="2026-09-25T11:49:00Z",
+                head_sha="a",
+                path=".github/workflows/scan.yml",
+            ),
             run(run_id=3, created="2026-09-25T11:48:00Z", head_sha="b"),
-            run(run_id=4, created="2026-09-25T11:47:00Z", head_sha="b"),
+            run(
+                run_id=4,
+                created="2026-09-25T11:47:00Z",
+                head_sha="b",
+                path=".github/workflows/scan.yml",
+            ),
             run(run_id=5, created="2026-09-25T11:46:00Z", head_sha="c"),
         ]
         title = Squares(runs, DEFAULT_COLORS, 2)
@@ -229,6 +244,56 @@ class RenderTest(unittest.TestCase):
 
         self.assertEqual([r.id for r in first_commits(runs, 2)], ["1", "2", "3"])
 
+    def test_draws_one_square_per_workflow_however_often_it_ran(self):
+        runs = [
+            run(
+                run_id=4, created="2026-09-25T11:50:00Z", head_sha="a", event="schedule"
+            ),
+            run(
+                run_id=3,
+                created="2026-09-25T11:45:00Z",
+                head_sha="a",
+                path=".github/workflows/scan.yml",
+            ),
+            run(
+                run_id=2, created="2026-09-25T10:50:00Z", head_sha="a", event="schedule"
+            ),
+            run(
+                run_id=1,
+                created="2026-09-25T09:50:00Z",
+                head_sha="a",
+                conclusion="failure",
+            ),
+        ]
+
+        self.assertEqual(
+            squares(Squares(runs, DEFAULT_COLORS, 5).attrs["image"]), [[GREEN, GREEN]]
+        )
+
+    def test_tucks_a_workflows_earlier_runs_on_a_commit_into_its_submenu(self):
+        runs = [
+            run(
+                run_id=3, created="2026-09-25T11:50:00Z", head_sha="a", event="schedule"
+            ),
+            run(
+                run_id=2, created="2026-09-25T10:50:00Z", head_sha="a", event="schedule"
+            ),
+            run(run_id=1, created="2026-09-25T09:50:00Z", head_sha="a"),
+        ]
+        output = render(Commits(runs, VIEW, 5))
+
+        self.assertEqual(
+            [label for label, _, _ in rows(output)][1:],
+            ["CI \x1b[90m#3 · 5m ago\x1b[0m"],
+        )
+        self.assertIn(
+            "--Earlier runs (2) | font=Menlo\n"
+            "----#2 – schedule – Succeeded in 1h 5m – 5m ago"
+            " | href=https://github.com/o/r/actions/runs/2 image=",
+            output,
+        )
+        self.assertIn("----#1 – push – Succeeded in 2h 5m – 5m ago", output)
+
     def test_draws_a_grey_square_when_there_are_no_runs(self):
         self.assertEqual(
             squares(Squares([], DEFAULT_COLORS, 5).attrs["image"]), [[GREY]]
@@ -237,7 +302,12 @@ class RenderTest(unittest.TestCase):
     def test_heads_each_commit_with_its_repo_over_its_runs(self):
         runs = [
             run(run_id=1, created="2026-09-25T11:50:00Z", head_sha="abcdef123456"),
-            run(run_id=2, created="2026-09-25T11:45:00Z", head_sha="abcdef123456"),
+            run(
+                run_id=2,
+                created="2026-09-25T11:45:00Z",
+                head_sha="abcdef123456",
+                path=".github/workflows/scan.yml",
+            ),
             run(run_id=3, created="2026-09-25T11:40:00Z"),
         ]
         output = render(Commits(runs, VIEW, 5))
